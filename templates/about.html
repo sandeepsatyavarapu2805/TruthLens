@@ -3,42 +3,32 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>About TruthLens</title>
+  <title data-i18n="about">About — TruthLens</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <script defer src="{{ url_for('static', filename='script.js') }}"></script>
 </head>
-<body data-theme="ocean">
-  <nav class="navbar">
-    <div class="brand">TruthLens</div>
+<body>
+  <nav class="nav glass">
+    <div class="nav-left">
+      <div class="brand" data-i18n="appName">TruthLens</div>
+    </div>
     <div class="nav-right">
-      <a href="{{ url_for('index') }}" class="btn">Home</a>
+      <a href="/" class="btn small" data-i18n="dashboard">Home</a>
+      <a href="/login" class="btn small" data-i18n="login">Login</a>
     </div>
   </nav>
 
-  <main class="about-page glass">
-    <h1>Our Mission</h1>
-    <p>TruthLens aims to reduce misinformation and provide accessible, AI-powered tools to verify media and claims. We combine AI analysis (Google Gemini), reverse-image checks, and human-friendly explanations to help people make informed decisions.</p>
-
-    <h2>How It Works</h2>
-    <ol>
-      <li>User submits text, link, image, or video.</li>
-      <li>Server composes a structured prompt for Gemini and additional services (reverse image search, transcript extraction).</li>
-      <li>Gemini returns an analysis which we parse into a credibility score, summary, and sources.</li>
-      <li>Results are saved to the user's history and can be exported or shared.</li>
-    </ol>
-
-    <h2>Privacy</h2>
-    <p>We store only data required for user features and user history. Uploaded media is stored temporarily and can be deleted by the user. DO NOT upload sensitive personal data.</p>
-
-    <h2>Contact</h2>
-    <form id="contact-form" class="contact-form">
-      <input name="name" placeholder="Name" required />
-      <input name="email" placeholder="Email" required />
-      <textarea name="message" rows="5" placeholder="Message"></textarea>
-      <button type="submit" class="btn btn-primary">Send</button>
-    </form>
-    <div id="contact-result"></div>
+  <main class="container fade-in">
+    <section class="glass-card">
+      <h1 data-i18n="about">About TruthLens</h1>
+      <p>TruthLens uses Gemini to analyze claims and present a credibility score, summary and verified sources. We respect privacy and do not share your data.</p>
+      <h3 data-i18n="contact">Contact</h3>
+      <form action="/contact" method="post">
+        <input name="email" placeholder="you@example.com" />
+        <textarea name="message" placeholder="Your message"></textarea>
+        <button class="btn btn-primary">Send</button>
+      </form>
+    </section>
   </main>
-
-  <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
 </html>

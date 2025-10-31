@@ -3,57 +3,41 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Profile — TruthLens</title>
+  <title data-i18n="profile">Profile — TruthLens</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <script defer src="{{ url_for('static', filename='script.js') }}"></script>
 </head>
-<body data-theme="{{ user_row['theme'] if user_row else 'ocean' }}">
-  <nav class="navbar glass">
-    <div class="brand">TruthLens</div>
+<body>
+  <nav class="nav glass">
+    <div class="nav-left">
+      <div class="brand" data-i18n="appName">TruthLens</div>
+    </div>
     <div class="nav-right">
-      <a href="{{ url_for('dashboard') }}" class="btn">Dashboard</a>
-      <a href="{{ url_for('logout') }}" class="btn">Logout</a>
+      <select id="langSelect" class="lang-select"></select>
+      <select id="themeSelect" class="theme-select"></select>
+      <a href="/dashboard" class="btn small" data-i18n="dashboard">Dashboard</a>
+      <a href="/logout" class="btn small btn-ghost" data-i18n="logout">Logout</a>
     </div>
   </nav>
 
-  <main class="profile-page">
-    <section class="profile-card glass">
-      <div class="profile-left">
-        <img class="avatar" src="{{ user_row['avatar'] or url_for('static', filename='avatar-default.png') }}" alt="avatar" />
-      </div>
-      <div class="profile-right">
-        <h2>{{ user_row['name'] or user_row['email'] }}</h2>
-        <p class="small">Joined: {{ user_row['created_at'] }}</p>
-        <p id="user-bio">{{ user_row['bio'] or 'No bio yet.' }}</p>
-        <div class="profile-actions">
-          <button id="edit-profile" class="btn">Edit</button>
-          <button id="change-theme" class="btn">Set Theme</button>
+  <main class="container fade-in">
+    <section class="glass-card">
+      <h2 data-i18n="profile">Profile</h2>
+      <div class="profile-grid">
+        <div class="card">
+          <h4>{{ current_user.name or current_user.email }}</h4>
+          <p class="muted">{{ current_user.email }}</p>
+          <div class="row">
+            <a href="/logout" class="btn btn-outline" data-i18n="logout">Logout</a>
+          </div>
+        </div>
+
+        <div class="card">
+          <h4>Recent Analyses</h4>
+          <div class="muted small">Saved checks will appear here.</div>
         </div>
       </div>
     </section>
-
-    <section class="history-list glass">
-      <h3>Recent Analyses</h3>
-      <div class="history-cards">
-        {% for a in analyses %}
-          <div class="history-card">
-            <div class="h-head">
-              <strong>{{ a['input_type'] | capitalize }}</strong>
-              <span class="muted">{{ a['created_at'] }}</span>
-            </div>
-            <div class="h-body">
-              {% set r = a['result_json'] | safe %}
-              {% set parsed = r | loads %}
-              <div>Score: {{ parsed.get('credibility_score', '—') }}</div>
-              <div>Category: {{ parsed.get('category', '—') }}</div>
-            </div>
-          </div>
-        {% else %}
-          <p>No analyses yet — try the dashboard.</p>
-        {% endfor %}
-      </div>
-    </section>
   </main>
-
-  <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
 </html>

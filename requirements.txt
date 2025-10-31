@@ -8,4 +8,4 @@ gunicorn
 python-dotenv
 reportlab
 js2py
-# sqlite3 is part of stdlib (no pip install needed)
+Flask-Talisman

@@ -3,37 +3,28 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Login — TruthLens</title>
+  <title data-i18n="login">Login — TruthLens</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <script defer src="{{ url_for('static', filename='script.js') }}"></script>
 </head>
-<body data-theme="ocean">
-  <nav class="navbar">
-    <div class="brand">TruthLens</div>
-  </nav>
-
-  <main class="auth-page glass">
-    <h2 id="login-title">Login</h2>
-    <form method="POST" action="{{ url_for('login') }}" class="auth-form">
-      <label>Email</label>
-      <input name="email" type="email" required />
-      <label>Password</label>
-      <input name="password" type="password" required />
-      <div class="auth-actions">
-        <button type="submit" class="btn btn-primary">Sign In</button>
-        <a href="{{ url_for('signup') }}" class="btn btn-link">Create account</a>
-      </div>
+<body class="center-page">
+  <div class="card auth-card fade-in">
+    <h2 data-i18n="login">Login</h2>
+    <form action="/login" method="post" class="form">
+      <label for="email" data-i18n="email">Email</label>
+      <input id="email" name="email" type="email" placeholder="you@example.com" required>
+      <label for="password" data-i18n="password">Password</label>
+      <input id="password" name="password" type="password" placeholder="••••••" required>
+      <button type="submit" class="btn btn-primary full" id="loginSubmit" data-i18n="login">Login</button>
     </form>
 
-    <div class="oauth">
-      <p>Or sign in with</p>
-      <a href="{{ url_for('google.login') }}" class="btn btn-google">Sign in with Google</a>
-    </div>
+    <div class="or" data-i18n="or">or</div>
 
-    <div class="small-note">
-      <a href="{{ url_for('index') }}">Back to home</a>
-    </div>
-  </main>
+    <a href="{{ url_for('google.login') }}" class="btn btn-google full" id="googleBtn">
+      <img src="https://developers.google.com/identity/images/g-logo.png" alt="G" /> <span data-i18n="googleSignIn">Sign in with Google</span>
+    </a>
 
-  <script src="{{ url_for('static', filename='script.js') }}"></script>
+    <div class="muted small">Don't have an account? <a href="/signup" data-i18n="signup">Sign up</a></div>
+  </div>
 </body>
 </html>

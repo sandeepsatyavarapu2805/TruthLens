@@ -1,300 +1,132 @@
-/* TruthLens script.js
-   Handles:
-   - Tabbing and tool actions
-   - Theme switching (localStorage + calls server API)
-   - Language switching (translations object)
-   - Calls to /analyze
-   - Speech recognition & voice output
-   - Toasts and simple animations
-   - PDF export via jsPDF (frontend)
-*/
+// static/script.js
+// Handles theme, language, translations, analyze stubs, toasts, animations
 
-const TRANSLATIONS = {
-  en: {
-    verifyNow: "Verify Now",
-    login: "Login",
-    signup: "Sign Up",
-    analyze: "Analyze",
-    summary: "Summary",
-    explanation: "Explanation",
-    sources: "Verified Sources",
-    credibility: "Credibility"
-  },
-  hi: {
-    verifyNow: "अब सत्यापित करें",
-    login: "लॉगिन",
-    signup: "साइन अप",
-    analyze: "विश्लेषण करें",
-    summary: "सारांश",
-    explanation: "व्याख्या",
-    sources: "सत्यापित स्रोत",
-    credibility: "विश्वसनीयता"
-  },
-  te: {
-    verifyNow: "ఇప్పుడు చిత్రానికి సాక్ష్యం తీసుకోండి",
-    login: "లాగిన్",
-    signup: "సైన్ అప్",
-    analyze: "విశ్లేషణ",
-    summary: "సారాంశం",
-    explanation: "వివరణ",
-    sources: "సమర్థించబడిన మూలాలు",
-    credibility: "నమ్మకదారుడు"
+let translations = {};
+let currentLang = localStorage.getItem('tl_lang') || 'en';
+let currentTheme = localStorage.getItem('tl_theme') || 'ocean';
+
+// load translations from /translations endpoint
+async function loadTranslations(){
+  try{
+    const r = await fetch('/translations');
+    if(r.ok){ translations = await r.json(); }
+    else { throw new Error('no translations'); }
+  }catch(e){
+    translations = {
+      en:{appName:'TruthLens',tagline:'See the Truth Beyond the Noise.',verifyNow:'Verify Now',login:'Login',signup:'Sign Up'},
+      hi:{appName:'ट्रुथलेंस',tagline:'शोर के परे सत्य देखें।',verifyNow:'अभी सत्यापित करें',login:'लॉगइन',signup:'साइन अप'},
+      te:{appName:'ట్రూథ్‌లెన్సు',tagline:'ఇప్పుడు నిర్ధారించండి',verifyNow:'ఇప్పుడు నిర్ధారించండి',login:'లాగిన్',signup:'సైన్ అప్'}
+    };
   }
-};
+  initLangAndThemeUI();
+  applyLanguage(currentLang);
+  applyTheme(currentTheme);
+}
 
-document.addEventListener("DOMContentLoaded", () => {
-  // Tabs
-  document.querySelectorAll(".tab-link").forEach(link => {
-    link.addEventListener("click", (e) => {
-      e.preventDefault();
-      document.querySelectorAll(".tab-link").forEach(x => x.classList.remove("active"));
-      e.target.classList.add("active");
-      const href = e.target.getAttribute("href").substring(1);
-      document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
-      document.getElementById(href).classList.add("active");
+// populate language & theme selectors
+function initLangAndThemeUI(){
+  const langSelects = document.querySelectorAll('#langSelect');
+  langSelects.forEach(s=>{
+    s.innerHTML = '';
+    Object.keys(translations).forEach(k=>{
+      const opt = document.createElement('option'); opt.value=k; opt.textContent=k.toUpperCase(); s.appendChild(opt);
     });
+    s.value = currentLang;
+    s.onchange = (e)=>changeLanguage(e.target.value);
   });
-
-  // Theme init
-  const savedTheme = localStorage.getItem("truthlens_theme") || document.body.getAttribute("data-theme") || "ocean";
-  applyTheme(savedTheme);
-  const themeSelect = document.getElementById("theme-select") || document.getElementById("top-theme-switch");
-  if (themeSelect) themeSelect.value = savedTheme;
-  if (themeSelect) themeSelect.addEventListener("change", (e) => {
-    const t = e.target.value;
-    applyTheme(t);
-    localStorage.setItem("truthlens_theme", t);
-    // Persist to server if logged in
-    fetch("/api/theme", {method:"POST", credentials:"include", headers:{"Content-Type":"application/json"}, body:JSON.stringify({theme:t})});
+  const themes = ['ocean','emerald','crimson','midnight','classic','royal'];
+  const themeSelects = document.querySelectorAll('#themeSelect');
+  themeSelects.forEach(s=>{
+    s.innerHTML=''; themes.forEach(t=>{ const opt=document.createElement('option'); opt.value=t; opt.textContent=t.charAt(0).toUpperCase()+t.slice(1); s.appendChild(opt);});
+    s.value=currentTheme; s.onchange=(e)=>changeTheme(e.target.value);
   });
+}
 
-  // Language init
-  const savedLang = localStorage.getItem("truthlens_lang") || "en";
-  const langSelect = document.getElementById("lang-select") || document.getElementById("top-lang-switch");
-  if (langSelect) langSelect.value = savedLang;
-  setLanguage(savedLang);
-  if (langSelect) langSelect.addEventListener("change", (e) => {
-    const l = e.target.value;
-    setLanguage(l);
-    localStorage.setItem("truthlens_lang", l);
-    fetch("/api/language", {method:"POST", credentials:"include", headers:{"Content-Type":"application/json"}, body:JSON.stringify({language:l})});
+// apply language strings to elements with data-i18n
+function applyLanguage(lang){
+  currentLang = lang; localStorage.setItem('tl_lang', lang);
+  const dict = translations[lang] || translations['en'];
+  document.querySelectorAll('[data-i18n]').forEach(el=>{
+    const key = el.getAttribute('data-i18n');
+    if(dict[key]) el.textContent = dict[key];
   });
+  // placeholders update
+  if(document.getElementById('email')) document.getElementById('email').placeholder = dict.email || 'Email';
+  if(document.getElementById('password')) document.getElementById('password').placeholder = dict.password || 'Password';
+  // push language to server (best-effort)
+  fetch('/api/language', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({language:lang})}).catch(()=>{});
+}
 
-  // Tool actions
-  const analyzeTextBtn = document.getElementById("analyze-text");
-  if (analyzeTextBtn) analyzeTextBtn.addEventListener("click", () => submitAnalysis("text", document.getElementById("text-input").value));
+function changeLanguage(l){ applyLanguage(l); showToast('Language changed','info'); }
 
-  const analyzeLinkBtn = document.getElementById("analyze-link");
-  if (analyzeLinkBtn) analyzeLinkBtn.addEventListener("click", () => submitAnalysis("link", document.getElementById("link-input").value));
+function applyTheme(theme){ document.documentElement.setAttribute('data-theme', theme); currentTheme = theme; localStorage.setItem('tl_theme', theme); }
+function changeTheme(t){ applyTheme(t); fetch('/api/theme', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({theme:t})}).catch(()=>{}); showToast('Theme saved', 'success'); }
 
-  const analyzeImageBtn = document.getElementById("analyze-image");
-  if (analyzeImageBtn) analyzeImageBtn.addEventListener("click", () => {
-    const file = document.getElementById("image-file").files[0];
-    if (!file) { toast("Choose a file first", "warning"); return; }
-    uploadAndAnalyzeFile(file);
+// analyze helpers
+async function doAnalyze(formData){
+  showToast('Analyzing...', 'info');
+  try{
+    const res = await fetch('/analyze', {method:'POST', body: formData});
+    const data = await res.json();
+    if(data.status === 'ok') { displayResults(data.result); showToast('Analysis complete', 'success'); }
+    else { showToast('Error: ' + (data.message||'unknown'), 'error'); }
+  }catch(e){ showToast('Network/API error', 'error'); }
+}
+
+function displayResults(result){
+  const area = document.getElementById('resultsArea');
+  if(!area) return;
+  area.innerHTML = '';
+  const score = result.credibility_score || 0;
+  const category = result.category || 'unverifiable';
+  const summary = result.summary || result.explanation || '';
+  const sources = (result.source_links && result.source_links.length) ? result.source_links : [];
+  const html = `
+    <div class="row" style="gap:18px;align-items:flex-start;">
+      <div style="flex:0 0 220px;">
+        <div style="font-weight:700">Score</div>
+        <div class="scoreBar"><div class="scoreFill" style="width:0%"></div></div>
+        <div style="margin-top:8px">${score} / 100 • <strong>${category}</strong></div>
+      </div>
+      <div style="flex:1;">
+        <div style="font-weight:700">Summary</div>
+        <div>${escapeHTML(summary).replace(/\n/g,'<br/>')}</div>
+        <div style="margin-top:8px;font-weight:700">Sources</div>
+        <ul>${sources.map(s=>`<li><a href="${s}" target="_blank">${s}</a></li>`).join('')}</ul>
+      </div>
+    </div>
+  `;
+  area.innerHTML = html;
+  // animate fill
+  requestAnimationFrame(()=> {
+    document.querySelectorAll('.scoreFill').forEach(el => el.style.width = (score)+'%');
   });
+}
 
-  const analyzeVideoBtn = document.getElementById("analyze-video");
-  if (analyzeVideoBtn) analyzeVideoBtn.addEventListener("click", () => {
-    const url = document.getElementById("video-url").value;
-    const transcript = document.getElementById("video-transcript").value;
-    submitAnalysis("video", url || transcript, {transcript: transcript});
-  });
+function escapeHTML(s){ return String(s||'').replace(/[&<>"']/g, (m)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
 
-  // FAB quick verify
-  const fab = document.getElementById("fab-verify");
-  if (fab) fab.addEventListener("click", () => {
-    document.getElementById("text-input").focus();
-    toast("Quick verify ready", "info");
-  });
+// toasts
+function showToast(msg, type='info'){
+  const t = document.createElement('div'); t.className = 'toast toast-'+type; t.textContent = msg; document.body.appendChild(t);
+  setTimeout(()=> t.classList.add('visible'), 50);
+  setTimeout(()=> { t.classList.remove('visible'); setTimeout(()=>t.remove(),300); }, 3500);
+}
 
-  // Export PDF
-  const pdfBtn = document.getElementById("download-pdf");
-  if (pdfBtn) pdfBtn.addEventListener("click", exportResultPDF);
+// hook analyze buttons
+function initAnalyzeButtons(){
+  const textBtn = document.getElementById('analyzeTextBtn');
+  if(textBtn) textBtn.onclick = ()=>{ const text=document.getElementById('inputText').value||''; const fd=new FormData(); fd.append('type','text'); fd.append('content', text); doAnalyze(fd); };
+  const linkBtn = document.getElementById('analyzeLinkBtn');
+  if(linkBtn) linkBtn.onclick = ()=>{ const link=document.getElementById('linkInput').value||''; const fd=new FormData(); fd.append('type','link'); fd.append('content', link); doAnalyze(fd); };
+  const fileBtn = document.getElementById('analyzeFileBtn');
+  if(fileBtn) fileBtn.onclick = ()=>{ const file=document.getElementById('fileInput').files[0]; if(!file){ showToast('Choose a file first','warning'); return;} const fd=new FormData(); fd.append('type','image'); fd.append('file', file); doAnalyze(fd); };
+  const transcriptBtn = document.getElementById('analyzeTranscriptBtn');
+  if(transcriptBtn) transcriptBtn.onclick = ()=>{ const text=document.getElementById('transcriptInput').value||''; const fd=new FormData(); fd.append('type','video'); fd.append('content', text); doAnalyze(fd); };
+}
 
-  // Share buttons
-  const wBtn = document.getElementById("share-whatsapp");
-  if (wBtn) wBtn.addEventListener("click", shareWhatsApp);
-  const tBtn = document.getElementById("share-twitter");
-  if (tBtn) tBtn.addEventListener("click", shareTwitter);
-
-  // Contact form
-  const contact = document.getElementById("contact-form");
-  if (contact) {
-    contact.addEventListener("submit", (e) => {
-      e.preventDefault();
-      document.getElementById("contact-result").innerText = "Thanks — we'll reply to your email.";
-      contact.reset();
-    });
-  }
-
-  // Speech recognition example: press analyze-text will also read aloud summary after result
+// init
+window.addEventListener('DOMContentLoaded', async ()=>{
+  await loadTranslations();
+  initAnalyzeButtons();
+  const fab = document.getElementById('fabVerify'); if(fab) fab.onclick = ()=>{ const el=document.getElementById('inputText'); if(el) el.focus(); showToast('Ready for quick verify','info'); };
 });
-
-// ----------------------
-// Theme & language
-// ----------------------
-function applyTheme(theme) {
-  document.body.setAttribute("data-theme", theme || "ocean");
-  // apply class to body for CSS variables reading
-  document.documentElement.setAttribute("data-theme", theme);
-}
-
-function setLanguage(lang) {
-  const t = TRANSLATIONS[lang] || TRANSLATIONS.en;
-  document.getElementById("hero-title")?.innerText && (document.getElementById("hero-title").innerText = TRANSLATIONS[lang]?.verifyNow || "See the Truth Beyond the Noise");
-  // update other tokens
-  document.querySelectorAll("[data-i18n]").forEach(el => {
-    const key = el.getAttribute("data-i18n");
-    el.innerText = t[key] || el.innerText;
-  });
-}
-
-// ----------------------
-// Toasts & helpers
-// ----------------------
-function toast(message, type="info", duration=3500) {
-  const root = document.getElementById("toast");
-  root.className = `toast toast-${type}`;
-  root.innerText = message;
-  root.style.opacity = 1;
-  setTimeout(() => { root.style.opacity = 0; }, duration);
-}
-
-// ----------------------
-// Analysis
-// ----------------------
-async function submitAnalysis(type, content, extras = {}) {
-  try {
-    showLoader(true);
-    const form = new FormData();
-    form.append("type", type);
-    form.append("content", content || "");
-    if (extras.transcript) form.append("transcript", extras.transcript);
-    const res = await fetch("/analyze", {method: "POST", body: form, credentials: "include"});
-    const data = await res.json();
-    showLoader(false);
-    if (data.status === "ok") {
-      displayResult(data.result);
-      toast("Analysis complete", "success");
-    } else {
-      toast("Analysis failed: " + (data.message || "Unknown"), "error");
-    }
-  } catch (err) {
-    console.error(err);
-    showLoader(false);
-    toast("Error during analysis", "error");
-  }
-}
-
-async function uploadAndAnalyzeFile(file) {
-  const form = new FormData();
-  form.append("type", file.type.startsWith("image") ? "image" : "video");
-  form.append("file", file);
-  showLoader(true);
-  try {
-    const res = await fetch("/analyze", {method:"POST", body:form, credentials:"include"});
-    const data = await res.json();
-    showLoader(false);
-    if (data.status === "ok") {
-      displayResult(data.result);
-      toast("File analyzed", "success");
-    } else {
-      toast("File analysis failed", "error");
-    }
-  } catch (e) {
-    showLoader(false);
-    toast("Upload error", "error");
-  }
-}
-
-// ----------------------
-// Display result & UI
-// ----------------------
-function displayResult(result) {
-  document.getElementById("result-title").innerText = `Result • ${result.category?.toUpperCase() || ''}`;
-  document.getElementById("result-summary").innerText = result.summary || "No summary provided.";
-  document.getElementById("result-explanation").innerText = result.explanation || "";
-  const sourcesList = document.getElementById("result-sources");
-  sourcesList.innerHTML = "";
-  (result.source_links || []).forEach(s => {
-    const li = document.createElement("li");
-    li.innerHTML = `<a href="${s}" target="_blank">${s}</a>`;
-    sourcesList.appendChild(li);
-  });
-  const score = Math.max(0, Math.min(100, parseInt(result.credibility_score || 0)));
-  const bar = document.getElementById("credibility-bar");
-  bar.style.width = `${score}%`;
-  bar.setAttribute("aria-valuenow", score);
-  const badge = document.getElementById("trust-badge");
-  badge.className = "badge";
-  if (score >= 80) { badge.classList.add("good"); badge.innerText = "True"; }
-  else if (score >= 50) { badge.classList.add("warn"); badge.innerText = "Partially True"; }
-  else { badge.classList.add("bad"); badge.innerText = "Fake / Unreliable"; }
-
-  // Chart breakdown
-  try {
-    const ctx = document.getElementById("score-breakdown").getContext("2d");
-    if (window._scoreChart) window._scoreChart.destroy();
-    window._scoreChart = new Chart(ctx, {
-      type: "doughnut",
-      data: {
-        labels: ["Credibility", "Uncertainty"],
-        datasets: [{data: [score, 100-score]}]
-      },
-      options: {responsive:true, maintainAspectRatio:false}
-    });
-  } catch (e) { console.warn(e); }
-
-  // Voice output (optional)
-  try {
-    const utter = new SpeechSynthesisUtterance(result.summary || "No summary");
-    speechSynthesis.speak(utter);
-  } catch(e) { /* ignore */ }
-
-  // animate fade-in
-  const card = document.getElementById("result-card");
-  card.classList.add("reveal");
-  setTimeout(() => card.classList.remove("reveal"), 1200);
-}
-
-// ----------------------
-// PDF export & share
-// ----------------------
-function exportResultPDF() {
-  const title = document.getElementById("result-title").innerText;
-  const summary = document.getElementById("result-summary").innerText;
-  const explanation = document.getElementById("result-explanation").innerText;
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF();
-  doc.setFontSize(18);
-  doc.text("TruthLens Report", 14, 20);
-  doc.setFontSize(12);
-  doc.text(title, 14, 30);
-  doc.text("Summary:", 14, 44);
-  doc.text(doc.splitTextToSize(summary, 180), 14, 50);
-  doc.text("Explanation:", 14, 100);
-  doc.text(doc.splitTextToSize(explanation, 180), 14, 106);
-  doc.save("truthlens-report.pdf");
-  toast("PDF exported", "success");
-}
-
-function shareWhatsApp() {
-  const title = encodeURIComponent(document.getElementById("result-title").innerText);
-  const summary = encodeURIComponent(document.getElementById("result-summary").innerText);
-  const url = `https://api.whatsapp.com/send?text=${title}%0A${summary}`;
-  window.open(url, "_blank");
-}
-function shareTwitter() {
-  const text = encodeURIComponent(document.getElementById("result-title").innerText + " - " + document.getElementById("result-summary").innerText);
-  const url = `https://twitter.com/intent/tweet?text=${text}`;
-  window.open(url, "_blank");
-}
-
-// ----------------------
-// Loader
-// ----------------------
-function showLoader(on=true) {
-  if (on) document.body.classList.add("loading");
-  else document.body.classList.remove("loading");
-}
