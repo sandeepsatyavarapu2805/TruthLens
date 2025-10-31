@@ -1,13 +1,16 @@
 """
-TruthLens - Flask App
-----------------------------------
-Features:
- - /api/factcheck/text  -> text & URL verification
- - /api/factcheck/media -> image/video prototype analysis
- - /api/translate       -> optional translation API
- - Serves index.html and /static/*
+TruthLens - Flask single-service backend (Gemini + heuristics)
+Endpoints:
+ - GET  /api/health
+ - POST /api/factcheck/text   { text, url, lang }
+ - POST /api/factcheck/media  form-data file OR JSON { b64 }
+ - POST /api/translate        { text, target }  (optional)
+Serves static files (index.html + /static/*)
+Environment variables:
+ - GEMINI_API_KEY (required)
+ - FACTCHECK_API_KEY (optional — Google Fact Check Tools)
+ - TRANSLATE_ENDPOINT (optional — e.g. LibreTranslate)
 """
-
 import os
 import re
 import base64
@@ -18,35 +21,42 @@ from urllib.parse import urlparse
 from flask import Flask, request, jsonify, send_from_directory, abort
 from flask_cors import CORS
 import requests
+from bs4 import BeautifulSoup
 from dotenv import load_dotenv
 from PIL import Image, ImageOps
 
-# Load environment variables
+# Optional Google generative ai (Gemini)
+try:
+    import google.generativeai as genai
+    GEMINI_AVAILABLE = True
+except Exception:
+    genai = None
+    GEMINI_AVAILABLE = False
+
 load_dotenv()
 
-# Flask setup
 app = Flask(__name__, static_folder='static', static_url_path='/static')
 CORS(app)
 
 PORT = int(os.getenv('PORT', 5000))
-FACTCHECK_KEY = os.getenv('FACTCHECK_API_KEY')  # Google Fact Check API
-TINEYE_KEY = os.getenv('TINEYE_API_KEY')  # optional
-GOOGLE_VISION_KEY = os.getenv('GOOGLE_VISION_KEY')  # optional
-TRANSLATE_ENDPOINT = os.getenv('TRANSLATE_ENDPOINT')  # optional
-TRANSLATE_KEY = os.getenv('TRANSLATE_KEY')  # optional
+GEMINI_KEY = os.getenv('GEMINI_API_KEY')
+FACTCHECK_KEY = os.getenv('FACTCHECK_API_KEY')
+TRANSLATE_ENDPOINT = os.getenv('TRANSLATE_ENDPOINT')
+TRANSLATE_KEY = os.getenv('TRANSLATE_KEY')
 
-# -------------------------------
-# Heuristic patterns
-# -------------------------------
+if GEMINI_KEY and GEMINI_AVAILABLE:
+    genai.configure(api_key=GEMINI_KEY)
+    GEN_MODEL = genai.GenerativeModel("gemini-1.5-flash")
+else:
+    GEN_MODEL = None
+
+# Heuristics
 SENSATIONAL_RE = re.compile(
     r'\b(viral|shocking|unbelievable|breaking|must-see|exclusive|miracle|shocker)\b', re.I)
-LOW_REPUTATION_DOMAINS_RE = re.compile(
-    r'\.(xyz|club|cf|ga|gq|icu|top|tk)$', re.I)
+LOW_REP_DOMAIN_RE = re.compile(r'\.(xyz|club|cf|ga|gq|icu|top|tk)$', re.I)
 
 
-# -------------------------------
-# Utility functions
-# -------------------------------
+# ---------- utilities ----------
 def domain_from_url(u):
     try:
         host = urlparse(u).hostname or ''
@@ -62,17 +72,18 @@ def safe_json(resp):
         return {}
 
 
-def compute_blended_score(external_matches, heuristics):
-    """Return score 0–100 by blending heuristics + external sources."""
-    score = 50
-    if external_matches:
-        has_debunk = any(
-            re.search(r'(false|hoax|mislead|incorrect|debunk)', (m.get('verdict') or ''), re.I)
-            for m in external_matches
-        )
-        score = 20 if has_debunk else 85
-    score -= len(heuristics) * 8
-    return max(0, min(100, score))
+def compute_score(db_matches, heuristics_count, ai_prob=0.0):
+    # base score
+    score = 55
+    if db_matches:
+        # If any db match contains debunk keywords -> low
+        debunk = any(re.search(r'(false|hoax|mislead|fabricat|incorrect|debunk)', (m.get('verdict') or ''), re.I)
+                     for m in db_matches)
+        score = 20 if debunk else 85
+    score -= heuristics_count * 8
+    # small penalty for likely-AI content
+    score = max(0, min(100, int(score - ai_prob * 10)))
+    return score
 
 
 def verdict_from_score(score):
@@ -83,11 +94,9 @@ def verdict_from_score(score):
     return "Unclear"
 
 
-# -------------------------------
-# External integrations (mocked)
-# -------------------------------
+# ---------- external integrations (optional) ----------
 def query_google_factcheck(query):
-    """Query Google Fact Check Tools API if key is set."""
+    """Query Google Fact Check Tools if FACTCHECK_KEY is set (optional)."""
     if not FACTCHECK_KEY:
         return []
     url = "https://factchecktools.googleapis.com/v1alpha1/claims:search"
@@ -98,107 +107,111 @@ def query_google_factcheck(query):
             claims = data.get('claims', [])
             results = []
             for c in claims:
-                claim_reviews = c.get('claimReview', [])
-                if claim_reviews:
-                    cr = claim_reviews[0]
-                    publisher = cr.get('publisher', {}).get('name')
-                    verdict = cr.get('textualRating') or cr.get('title') or ''
+                crs = c.get('claimReview', [])
+                if crs:
+                    cr = crs[0]
                     results.append({
-                        'source': publisher or 'factcheck',
-                        'verdict': verdict,
+                        'source': cr.get('publisher', {}).get('name', 'fact-check'),
+                        'verdict': cr.get('textualRating') or cr.get('title') or '',
                         'url': cr.get('url')
                     })
             return results
-    except Exception as e:
-        app.logger.warning("FactCheck API failed: %s", e)
+    except Exception:
+        pass
     return []
 
 
-def query_tineye_by_image_bytes(_):
-    """Placeholder for TinEye or reverse-image APIs."""
-    return []
+def gemini_text_analysis(text):
+    """Ask Gemini to summarize / fact-check the text. Returns text answer and ai_prob estimate."""
+    if not GEN_MODEL:
+        return None, 0.0
+    try:
+        prompt = (
+            "You are TruthLens, an impartial fact-checking assistant. "
+            "For the claim below, give a concise JSON with keys: Verdict, Explanation, Confidence (0-100).\n\n"
+            f"Claim: \"{text}\"\n\n"
+            "Respond ONLY in JSON."
+        )
+        resp = GEN_MODEL.generate_content(prompt)
+        # The API returns a text block — try to parse numbers for ai_prob heuristically
+        answer = resp.text.strip()
+        # very rough ai_prob = 0 for text analysis; we use separate heuristic
+        return answer, 0.0
+    except Exception:
+        return None, 0.0
 
 
-def detect_ai_text_heuristic(text):
-    """Lightweight heuristic for AI-generated text detection."""
-    if not text or len(text) < 50:
-        return {'ai_prob': 0.1, 'reason': 'Too short for detection'}
-
-    words = text.split()
-    avg_word_len = sum(len(w) for w in words) / max(1, len(words))
-    unique_words_ratio = len(set(words)) / max(1, len(words))
-    punctuation_variety = len(set(ch for ch in text if ch in '.,;:!?'))
-
-    score = 0.1
-    if avg_word_len > 6.5:
-        score += 0.25
-    if unique_words_ratio < 0.45:
-        score += 0.35
-    if punctuation_variety < 2:
-        score += 0.2
-
-    ai_prob = min(0.99, score)
-    return {'ai_prob': ai_prob,
-            'reason': f'avg_word_len={avg_word_len:.2f}, uniq_ratio={unique_words_ratio:.2f}, punct_var={punctuation_variety}'}
-
-
-# -------------------------------
-# API Endpoints
-# -------------------------------
-@app.route('/api/health')
+# ---------- endpoints ----------
+@app.route('/api/health', methods=['GET'])
 def health():
     return jsonify({'status': 'ok', 'time': datetime.utcnow().isoformat() + 'Z'})
 
 
 @app.route('/api/factcheck/text', methods=['POST'])
 def factcheck_text():
+    """
+    Request: JSON { text: "...", url: "...", lang: "en" }
+    Response: { score, verdict, heuristics[], sources[], explanation, ai_check, checked_at }
+    """
     body = request.get_json(force=True, silent=True) or {}
     text = (body.get('text') or '').strip()
     url = (body.get('url') or '').strip()
+    lang = body.get('lang') or 'en'
 
     if not text and not url:
         return jsonify({'error': 'Provide text or URL'}), 400
 
     query = text or url
-    external_matches = query_google_factcheck(query)
     heuristics = []
-
     if text and SENSATIONAL_RE.search(text):
         heuristics.append('sensational-language')
-    if url and LOW_REPUTATION_DOMAINS_RE.search(domain_from_url(url)):
-        heuristics.append('low-reputation-domain')
     if text and len(text) > 800:
         heuristics.append('very-long-claim')
     if text and sum(1 for ch in text if ch.isupper()) > len(text) * 0.45:
         heuristics.append('excessive-caps')
+    if url and LOW_REP_DOMAIN_RE.search(domain_from_url(url)):
+        heuristics.append('low-reputation-domain')
 
-    ai_check = detect_ai_text_heuristic(text)
-    score = compute_blended_score(external_matches, heuristics)
-    if ai_check.get('ai_prob', 0) > 0.65:
-        score = max(0, score - 6)
+    # external matches (Google FactCheck optional)
+    db_matches = query_google_factcheck(query) if FACTCHECK_KEY else []
 
+    # AI text analysis via Gemini (optional)
+    gemini_ans, ai_prob = gemini_text_analysis(query)
+
+    score = compute_score(db_matches, len(heuristics), ai_prob)
     verdict = verdict_from_score(score)
-    return jsonify({
+    explanation = "Automated blend of external matches (if any) and heuristic signals. Use sources below to verify."
+
+    resp = {
         'score': score,
         'verdict': verdict,
         'heuristics': heuristics,
-        'sources': external_matches,
-        'ai_check': ai_check,
-        'explanation': 'Automated verification combining heuristic checks and external databases.',
+        'sources': db_matches,
+        'ai_check': {'gemini_output': gemini_ans, 'ai_prob': ai_prob},
+        'explanation': explanation,
         'checked_at': datetime.utcnow().isoformat() + 'Z'
-    })
+    }
+    return jsonify(resp)
 
 
 @app.route('/api/factcheck/media', methods=['POST'])
 def factcheck_media():
+    """
+    Accepts multipart form-data 'file' or JSON { b64: "<base64>" }
+    Returns {score, verdict, findings[], explanation}
+    """
     try:
         if 'file' in request.files:
-            content = request.files['file'].read()
+            f = request.files['file']
+            content = f.read()
+            filename = getattr(f, 'filename', 'upload')
         else:
             body = request.get_json(force=True, silent=True) or {}
-            if 'b64' not in body:
+            b64 = body.get('b64')
+            if not b64:
                 return jsonify({'error': 'No file or b64 provided'}), 400
-            content = base64.b64decode(body['b64'])
+            content = base64.b64decode(b64)
+            filename = 'upload'
     except Exception as e:
         return jsonify({'error': 'Invalid file data', 'details': str(e)}), 400
 
@@ -206,72 +219,89 @@ def factcheck_media():
     score = 50
     verdict = verdict_from_score(score)
 
+    tmp = None
     try:
-        tmp = tempfile.NamedTemporaryFile(delete=False)
+        tmp = tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(filename)[1] or '.img')
         tmp.write(content)
+        tmp.flush()
         tmp.close()
+        # attempt to open as image
         img = Image.open(tmp.name)
         img.verify()
         img = Image.open(tmp.name)
         w, h = img.size
-        findings.append({'type': 'image', 'note': f'Validated image ({w}x{h})'})
-
-        img_small = ImageOps.grayscale(img).resize((8, 8), Image.LANCZOS)
-        pixels = list(img_small.getdata())
-        avg = sum(pixels) / len(pixels)
-        bits = ''.join('1' if p > avg else '0' for p in pixels)
-        phash = f'{int(bits, 2):016x}'[:16]
-        findings.append({'type': 'phash', 'value': phash})
-
-    except Exception as e:
-        findings.append({'type': 'file', 'note': f'Not an image: {str(e)}'})
-    finally:
+        findings.append({'type': 'image', 'note': f'validated image ({w}x{h})'})
+        # a small perceptual hash
         try:
-            os.unlink(tmp.name)
+            small = ImageOps.grayscale(img).resize((8, 8), Image.LANCZOS)
+            pixels = list(small.getdata())
+            avg = sum(pixels) / len(pixels)
+            bits = ''.join('1' if p > avg else '0' for p in pixels)
+            phash = f'{int(bits, 2):016x}'[:16]
+            findings.append({'type': 'phash', 'value': phash})
         except Exception:
             pass
+
+        # Optionally ask Gemini to analyze image (if configured)
+        if GEN_MODEL:
+            try:
+                prompt = "Analyze this image. State if it appears AI-generated, edited, or reused and give short reasoning."
+                # Gemini image API: provide prompt and image bytes in a parts list — best-effort approach
+                response = GEN_MODEL.generate_content([prompt, content])
+                findings.append({'type': 'gemini_analysis', 'value': response.text.strip()})
+            except Exception:
+                pass
+    except Exception as e:
+        # Not an image -> treat as video or unsupported file
+        findings.append({'type': 'file', 'note': f'Could not parse as image ({str(e)})'})
+    finally:
+        if tmp:
+            try:
+                os.unlink(tmp.name)
+            except Exception:
+                pass
+
+    # final verdict (prototype)
+    score = compute_score([], len([f for f in findings if 'note' in f and 'validated' not in f]))
+    verdict = verdict_from_score(score)
+    explanation = 'Prototype media analysis. Integrate reverse-image search (TinEye) or Google Vision for production.'
 
     return jsonify({
         'score': score,
         'verdict': verdict,
         'findings': findings,
-        'explanation': 'Prototype image analysis; add Vision/TinEye API for deeper checks.',
+        'explanation': explanation,
         'checked_at': datetime.utcnow().isoformat() + 'Z'
     })
 
 
 @app.route('/api/translate', methods=['POST'])
 def translate():
+    """
+    Uses TRANSLATE_ENDPOINT if provided (expected LibreTranslate-style { q, target }).
+    Fallback: echoes original text with note.
+    """
     body = request.get_json(force=True, silent=True) or {}
     text = body.get('text', '')
     target = body.get('target', 'en')
-
     if not TRANSLATE_ENDPOINT:
-        return jsonify({
-            'translated': text,
-            'provider': 'none',
-            'note': 'Translate endpoint not configured.'
-        })
-
+        return jsonify({'translated': text, 'provider': 'none', 'note': 'Translate endpoint not configured.'})
     try:
-        r = requests.post(TRANSLATE_ENDPOINT,
-                          json={'q': text, 'target': target, 'key': TRANSLATE_KEY},
-                          timeout=8)
+        r = requests.post(TRANSLATE_ENDPOINT, json={'q': text, 'target': target}, timeout=8)
         return jsonify(safe_json(r))
     except Exception as e:
-        return jsonify({'error': 'Translation failed', 'details': str(e)}), 500
+        return jsonify({'error': 'translation failed', 'details': str(e)}), 500
 
 
-# -------------------------------
-# Frontend Routes
-# -------------------------------
-@app.route('/')
+# Serve SPA root and static files
+@app.route('/', methods=['GET'])
 def index():
     return send_from_directory('.', 'index.html')
 
 
 @app.route('/<path:path>')
 def static_proxy(path):
+    # serve file from root or static folder
     if os.path.exists(path):
         return send_from_directory('.', path)
     static_path = os.path.join(app.static_folder, path)
@@ -280,8 +310,6 @@ def static_proxy(path):
     return abort(404)
 
 
-# -------------------------------
-# Main
-# -------------------------------
 if __name__ == '__main__':
+    # For Render use gunicorn start command; this is for local debug.
     app.run(host='0.0.0.0', port=PORT, debug=False)

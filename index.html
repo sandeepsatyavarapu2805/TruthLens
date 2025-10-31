@@ -3,112 +3,72 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>TruthLens — Verify news, images & videos</title>
-  <link rel="icon" href="/static/logo.png" />
+  <title>TruthLens — Verify news & media</title>
   <link rel="stylesheet" href="/static/style.css" />
+  <link rel="icon" href="/static/logo.png" />
 </head>
 <body>
-  <div id="app" class="page">
-    <nav class="nav">
-      <div class="nav-left">
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
         <div class="logo">TL</div>
-        <div class="brand">
-          <div class="brand-title">TruthLens</div>
-          <div class="brand-sub">Verify faster — learn to trust sources</div>
+        <div>
+          <h1>TruthLens</h1>
+          <p class="tag">Verify faster — stop misinformation</p>
         </div>
       </div>
-      <div class="nav-right">
-        <button id="themeToggle" class="btn ghost">Dark</button>
-        <select id="lang" class="select">
-          <option value="en">EN</option>
+      <div class="controls">
+        <select id="langSelect" title="Language">
+          <option value="en">English</option>
           <option value="hi">हिन्दी</option>
           <option value="te">తెలుగు</option>
           <option value="ta">தமிழ்</option>
         </select>
+        <button id="themeToggle">Dark</button>
       </div>
-    </nav>
+    </header>
 
-    <main class="container">
-      <section class="card hero">
-        <div class="hero-left">
-          <h1>Check headlines, messages & media instantly</h1>
-          <p class="muted">Paste text or a URL, or upload an image/video. We'll combine fact-checks, heuristics and media matches to give a clear verdict.</p>
-
-          <div class="field">
-            <label class="label">Text or URL</label>
-            <textarea id="inputText" placeholder="Paste message, headline or a URL here..." rows="5"></textarea>
-          </div>
-
-          <div class="row">
-            <div style="flex:1">
-              <button id="checkBtn" class="btn primary">Check now</button>
-              <button id="clearBtn" class="btn ghost">Clear</button>
-            </div>
-            <div style="min-width:220px">
-              <div class="small muted">Last checked: <span id="lastChecked">—</span></div>
-            </div>
-          </div>
-
-          <div id="resultBox" class="result-box mt"></div>
+    <main class="grid">
+      <section class="card main-card">
+        <h2>Check text or a URL</h2>
+        <textarea id="textInput" placeholder="Paste message, headline or URL..."></textarea>
+        <div class="row">
+          <button id="checkBtn" class="btn primary">Check now</button>
+          <button id="clearBtn" class="btn">Clear</button>
+          <button id="copyBtn" class="btn">Copy</button>
         </div>
 
-        <aside class="hero-right">
-          <div class="card small">
-            <h3>Media Scan</h3>
-            <div class="small muted">Upload an image or a short video for prototype analysis.</div>
-            <input id="fileInput" type="file" accept="image/*,video/*" />
-            <div id="preview" class="preview mt"></div>
-            <div class="row mt">
-              <button id="analyzeBtn" class="btn primary">Analyze media</button>
-              <button id="resetMediaBtn" class="btn ghost">Reset</button>
-            </div>
-          </div>
-
-          <div class="card small mt">
-            <h3>Quick tips</h3>
-            <ul class="tips">
-              <li>Check URLs (hover to inspect) before sharing.</li>
-              <li>Beware of sensational language like "shocking" or "exclusive".</li>
-              <li>Use local language explanations for communities.</li>
-            </ul>
-          </div>
-        </aside>
+        <div id="result" class="result"></div>
       </section>
 
-      <section class="card history mt">
-        <div class="history-header">
-          <h3>History</h3>
-          <div>
-            <button id="clearHistory" class="btn ghost">Clear</button>
-            <button id="exportHistory" class="btn ghost">Export</button>
-          </div>
+      <aside class="card side-card">
+        <h3>Scan media</h3>
+        <input id="fileInput" type="file" accept="image/*,video/*" />
+        <div id="preview"></div>
+        <div class="row">
+          <button id="scanBtn" class="btn primary">Analyze media</button>
+          <button id="resetBtn" class="btn">Reset</button>
         </div>
-        <div id="historyList" class="history-list"></div>
-      </section>
 
-      <section class="card learn mt">
-        <h3>Digital Awareness for Schools</h3>
-        <p class="muted">Short lessons and classroom packs can help students identify misleading content. Share this app with teachers.</p>
-        <div class="features">
-          <div class="feature">
-            <strong>Micro-lessons</strong>
-            <div class="small muted">Short videos & activities for classrooms.</div>
-          </div>
-          <div class="feature">
-            <strong>Community Groups</strong>
-            <div class="small muted">Local student volunteers can moderate and verify reports.</div>
-          </div>
-          <div class="feature">
-            <strong>Report flow</strong>
-            <div class="small muted">Users can flag suspicious items for manual review.</div>
-          </div>
-        </div>
-      </section>
-
+        <hr />
+        <h4>Digital Awareness</h4>
+        <p class="small">Use classroom packs, reels, and community groups to teach verification skills. See resources below.</p>
+      </aside>
     </main>
 
-    <footer class="footer">
-      © <span id="year"></span> TruthLens — Automated tools only. Always confirm with primary sources.
+    <section class="card history" id="historyCard">
+      <div class="history-head">
+        <h3>Recent checks</h3>
+        <div>
+          <button id="exportBtn" class="btn">Export</button>
+          <button id="clearHistoryBtn" class="btn">Clear</button>
+        </div>
+      </div>
+      <div id="historyList" class="history-list"></div>
+    </section>
+
+    <footer class="footer card">
+      © <span id="year"></span> TruthLens — Automated checks only. Always verify primary sources.
     </footer>
   </div>
 
