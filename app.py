@@ -267,9 +267,11 @@ def logout():
 # --------------------------
 # Main routes / pages
 # --------------------------
+from datetime import datetime
+
 @app.route("/")
 def index():
-    return render_template("index.html")
+    return render_template("index.html", datetime=datetime)
 
 @app.route("/about")
 def about():
