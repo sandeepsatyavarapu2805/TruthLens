@@ -19,19 +19,23 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 
 # Gemini SDK (google-generativeai)
-import google.generativeai as genai
+# Use the "google.generativeai" namespace (installed by google-generativeai)
+try:
+    import google.generativeai as genai
+except Exception:
+    genai = None
+
 # Configure from env
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
-if GEMINI_API_KEY:
+if GEMINI_API_KEY and genai:
     try:
         genai.configure(api_key=GEMINI_API_KEY)
     except Exception:
-        # ignore config errors here; analyze route will handle
-        pass
+        pass  # will handle in analyze route
 
 # App config
 app = Flask(__name__, static_folder="static", template_folder="templates")
-app.secret_key = os.getenv("SECRET_KEY", os.urandom(24))
+app.secret_key = os.getenv("SECRET_KEY") or os.urandom(24)
 CORS(app)
 
 # OAuth blueprint for Google (Flask-Dance)
@@ -43,8 +47,7 @@ google_bp = make_google_blueprint(
     scope=["profile", "email"],
     redirect_url="/google_login"
 )
-# register under /login so url_for('google.login') works
-app.register_blueprint(google_bp, url_prefix="/login")
+app.register_blueprint(google_bp, url_prefix="/login_google")
 
 # Flask-Login
 login_manager = LoginManager()
@@ -131,38 +134,43 @@ def save_analysis(user_id, input_type, input_content, result):
     conn.close()
 
 def gemini_analyze_text(prompt, max_tokens=700):
-    # Minimal example of calling Gemini via google-generativeai
-    if not GEMINI_API_KEY:
+    """
+    Calls Gemini via google.generativeai if available.
+    Returns standardized dict:
+    { credibility_score, summary, source_links, category, explanation }
+    """
+    # Fallback: if no key or SDK, return a dummy structured response
+    if not GEMINI_API_KEY or genai is None:
         return {
             "credibility_score": 50,
-            "summary": "Gemini API not configured. This is a placeholder summary.",
+            "summary": "Gemini not configured — placeholder analysis. Add GEMINI_API_KEY to environment for real results.",
             "source_links": [],
             "category": "unverifiable",
-            "explanation": "No Gemini key - placeholder result."
+            "explanation": "No Gemini API available in environment or SDK not installed."
         }
     try:
-        # Recommended call: use the chat completion API if available in SDK
+        # Example chat completion; adjust model / API usage if Google SDK changes
         response = genai.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
-                {"role": "system", "content": "You are an assistant that assesses news credibility."},
-                {"role": "user", "content": f"Analyze the following content for credibility and provide JSON with credibility_score (0-100), summary, source_links (list), category (fake/partially true/true/unverifiable), explanation. Content: {prompt}"}
+                {"role": "system", "content": "You are an assistant that assesses news credibility and returns JSON."},
+                {"role": "user", "content": f"Analyze for credibility and output JSON with keys: credibility_score (0-100), summary, source_links (list), category (fake/partially true/true/unverifiable), explanation. Content: {prompt}"}
             ],
             temperature=0.0,
             max_output_tokens=max_tokens
         )
-        # extract model text (SDK may vary)
+        # Try to extract text content
         try:
             content = response.choices[0].message.get("content", "")
         except Exception:
             content = str(response)
-        # try parse JSON from model
         try:
             parsed = json.loads(content)
             return parsed
         except Exception:
+            # If the model returns natural text, wrap it
             return {
-                "credibility_score": 75,
+                "credibility_score": 70,
                 "summary": content[:1200],
                 "source_links": [],
                 "category": "partially true",
@@ -179,7 +187,7 @@ def gemini_analyze_text(prompt, max_tokens=700):
         }
 
 # --------------------------
-# Auth routes (email/password)
+# Auth routes (email/password + Google)
 # --------------------------
 @app.route("/signup", methods=["GET", "POST"])
 def signup():
@@ -223,12 +231,13 @@ def login():
             user = User(row["id"], row["email"], row["name"])
             login_user(user)
             flash("Logged in successfully.", "success")
-            return redirect(url_for("dashboard"))
+            return redirect(url_for("analyze"))
         flash("Invalid credentials.", "danger")
     return render_template("login.html", datetime=datetime, user=current_user)
 
 @app.route("/google_login")
 def google_login():
+    # This route is the post-login landing for Flask-Dance Google
     if not google.authorized:
         return redirect(url_for("google.login"))
     resp = google.get("/oauth2/v2/userinfo")
@@ -257,7 +266,7 @@ def google_login():
     conn.close()
     login_user(user)
     flash("Logged in with Google.", "success")
-    return redirect(url_for("dashboard"))
+    return redirect(url_for("analyze"))
 
 @app.route("/logout")
 @login_required
@@ -268,20 +277,25 @@ def logout():
     return redirect(url_for("index"))
 
 # --------------------------
-# Main routes / pages
+# Main pages
 # --------------------------
 @app.route("/")
 def index():
     return render_template("index.html", datetime=datetime, user=current_user)
 
-@app.route("/about")
-def about():
-    return render_template("about.html", datetime=datetime, user=current_user)
-
-@app.route("/dashboard")
+@app.route("/analyze")
 @login_required
-def dashboard():
-    return render_template("dashboard.html", datetime=datetime, user=current_user)
+def analyze_page():
+    return render_template("analyze.html", datetime=datetime, user=current_user)
+
+@app.route("/insights")
+@login_required
+def insights():
+    return render_template("insights.html", datetime=datetime, user=current_user)
+
+@app.route("/resources")
+def resources():
+    return render_template("resources.html", datetime=datetime, user=current_user)
 
 @app.route("/profile")
 @login_required
@@ -290,48 +304,64 @@ def profile():
     cur = conn.cursor()
     cur.execute("SELECT * FROM users WHERE id = ?", (current_user.id,))
     user_row = cur.fetchone()
-    cur.execute("SELECT * FROM analyses WHERE user_id = ? ORDER BY created_at DESC LIMIT 50", (current_user.id,))
+    cur.execute("SELECT * FROM analyses WHERE user_id = ? ORDER BY created_at DESC LIMIT 100", (current_user.id,))
     analyses = cur.fetchall()
     conn.close()
     return render_template("profile.html", user_row=user_row, analyses=analyses, datetime=datetime, user=current_user)
 
+@app.route("/about")
+def about():
+    return render_template("about.html", datetime=datetime, user=current_user)
+
+@app.route("/contact", methods=["GET","POST"])
+def contact():
+    if request.method == "POST":
+        # store or email -- placeholder
+        flash("Thanks — your message was received.", "success")
+        return redirect(url_for("contact"))
+    return render_template("contact.html", datetime=datetime, user=current_user)
+
 # --------------------------
-# Analyze endpoint
+# API: analyze + theme/language/history
 # --------------------------
-@app.route("/analyze", methods=["POST"])
+@app.route("/api/analyze", methods=["POST"])
 @login_required
-def analyze():
+def api_analyze():
     try:
         data = request.form.to_dict()
         if request.is_json:
             data = request.get_json()
         input_type = data.get("type", "text")
         content = data.get("content", "")
-        if input_type == "image" and "file" in request.files:
+
+        # File handling
+        if input_type in ("image", "video") and "file" in request.files:
             f = request.files["file"]
             if f and allowed_file(f.filename):
                 filename = secure_filename(f.filename)
                 save_path = os.path.join(UPLOAD_FOLDER, filename)
-                os.makedirs(os.path.dirname(save_path), exist_ok=True)
                 f.save(save_path)
                 content = save_path
+
+        # Link scraping
         if input_type == "link":
             import requests
             try:
-                r = requests.get(content, timeout=8)
+                r = requests.get(content, timeout=8, headers={"User-Agent":"TruthLens/1.0"})
                 page_text = r.text[:50000]
-                prompt = f"Source link: {content}\nPage excerpt:\n{page_text}\n\nAssess credibility and provide JSON with credibility_score, summary, source_links, category, explanation."
+                prompt = f"Source link: {content}\nPage excerpt:\n{page_text}\n\nAssess credibility and return JSON with credibility_score, summary, source_links, category, explanation."
             except Exception:
                 prompt = f"Please analyze this link for credibility: {content}"
         elif input_type == "video":
-            transcript = data.get("transcript", "")
-            prompt = f"Analyze this video transcript for claims and credibility:\n{transcript or content}"
+            transcript = data.get("transcript","")
+            prompt = f"Analyze this video transcript for false claims and credibility:\n{transcript or content}"
         else:
             prompt = content
 
         result = gemini_analyze_text(prompt)
+        # Normalize simple fields
         if "credibility_score" not in result:
-            result["credibility_score"] = int(result.get("score", 50))
+            result["credibility_score"] = int(result.get("score", 50) or 50)
         if "category" not in result:
             score = result["credibility_score"]
             if score >= 80:
@@ -343,21 +373,19 @@ def analyze():
             else:
                 result["category"] = "fake"
 
+        # save
         save_analysis(current_user.id, input_type, content, result)
-        return jsonify({"status": "ok", "result": result})
+        return jsonify({"status":"ok","result":result})
     except Exception as e:
         traceback.print_exc()
-        return jsonify({"status": "error", "message": str(e)}), 500
+        return jsonify({"status":"error","message":str(e)}), 500
 
-# --------------------------
-# API endpoints: history, theme, language
-# --------------------------
-@app.route("/api/history", methods=["GET"])
+@app.route("/api/history")
 @login_required
 def api_history():
     conn = get_db()
     cur = conn.cursor()
-    cur.execute("SELECT * FROM analyses WHERE user_id = ? ORDER BY created_at DESC LIMIT 100", (current_user.id,))
+    cur.execute("SELECT id, input_type, input_content, result_json, created_at FROM analyses WHERE user_id = ? ORDER BY created_at DESC LIMIT 200", (current_user.id,))
     rows = cur.fetchall()
     conn.close()
     history = []
@@ -369,7 +397,7 @@ def api_history():
             "result": json.loads(r["result_json"]),
             "created_at": r["created_at"]
         })
-    return jsonify({"status": "ok", "history": history})
+    return jsonify({"status":"ok","history":history})
 
 @app.route("/api/theme", methods=["POST"])
 @login_required
@@ -381,7 +409,7 @@ def api_theme():
     cur.execute("UPDATE users SET theme = ? WHERE id = ?", (theme, current_user.id))
     conn.commit()
     conn.close()
-    return jsonify({"status": "ok", "theme": theme})
+    return jsonify({"status":"ok","theme":theme})
 
 @app.route("/api/language", methods=["POST"])
 @login_required
@@ -393,106 +421,44 @@ def api_language():
     cur.execute("UPDATE users SET language = ? WHERE id = ?", (language, current_user.id))
     conn.commit()
     conn.close()
-    return jsonify({"status": "ok", "language": language})
+    return jsonify({"status":"ok","language":language})
 
-# --------------------------
-# Translations endpoint (frontend fetches this)
-# --------------------------
+# Translations endpoint (full UI translations)
 @app.route("/translations")
 def translations():
     translations = {
         "en": {
-            "appName": "TruthLens",
-            "tagline": "See the Truth Beyond the Noise.",
-            "verifyNow": "Verify Now",
-            "login": "Login",
-            "signup": "Sign Up",
-            "email": "Email",
-            "password": "Password",
-            "or": "or",
-            "googleSignIn": "Sign in with Google",
-            "analyze": "Analyze",
-            "uploadImage": "Upload Image",
-            "analyzeLink": "Analyze Link",
-            "videoTranscript": "Video Transcript",
-            "profile": "Profile",
-            "dashboard": "Dashboard",
-            "about": "About",
-            "logout": "Logout",
-            "language": "Language",
-            "theme": "Theme",
-            "score": "Credibility Score",
-            "summary": "Summary",
-            "sources": "Verified Sources",
-            "category": "Category",
-            "exportPDF": "Export PDF",
-            "feedback": "Feedback",
-            "contact": "Contact Us",
-            "yearSuffix": "TruthLens • Built with ♡"
+            "appName":"TruthLens","tagline":"See the Truth Beyond the Noise.","verifyNow":"Verify Now",
+            "login":"Login","signup":"Sign Up","email":"Email","password":"Password","or":"or",
+            "googleSignIn":"Sign in with Google","analyze":"Analyze","uploadImage":"Upload Image","analyzeLink":"Analyze Link",
+            "videoTranscript":"Video Transcript","profile":"Profile","dashboard":"Dashboard","about":"About","logout":"Logout",
+            "language":"Language","theme":"Theme","score":"Credibility Score","summary":"Summary","sources":"Verified Sources",
+            "category":"Category","exportPDF":"Export PDF","feedback":"Feedback","contact":"Contact Us","history":"History",
+            "insights":"Insights","resources":"Resources","how":"How it works","searchPlaceholder":"Paste text or URL..."
         },
         "hi": {
-            "appName": "ट्रुथलेंस",
-            "tagline": "शोर के परे सत्य देखें।",
-            "verifyNow": "अभी सत्यापित करें",
-            "login": "लॉगइन",
-            "signup": "साइन अप",
-            "email": "ईमेल",
-            "password": "पासवर्ड",
-            "or": "या",
-            "googleSignIn": "Google से साइन इन करें",
-            "analyze": "विश्लेषण करें",
-            "uploadImage": "छवि अपलोड करें",
-            "analyzeLink": "लिंक विश्लेषण",
-            "videoTranscript": "वीडियो प्रतिलिपि",
-            "profile": "प्रोफ़ाइल",
-            "dashboard": "डैशबोर्ड",
-            "about": "बारे में",
-            "logout": "लॉगआउट",
-            "language": "भाषा",
-            "theme": "थीम",
-            "score": "विश्वसनीयता स्कोर",
-            "summary": "सारांश",
-            "sources": "सत्यापित स्रोत",
-            "category": "वर्ग",
-            "exportPDF": "PDF एक्सपोर्ट करें",
-            "feedback": "प्रतिक्रिया",
-            "contact": "संपर्क करें",
-            "yearSuffix": "ट्रुथलेंस • ♡ के साथ निर्मित"
+            "appName":"ट्रुथलेंस","tagline":"शोर के परे सत्य देखें।","verifyNow":"अभी सत्यापित करें",
+            "login":"लॉगइन","signup":"साइन अप","email":"ईमेल","password":"पासवर्ड","or":"या",
+            "googleSignIn":"Google से साइन इन करें","analyze":"विश्लेषण करें","uploadImage":"छवि अपलोड करें","analyzeLink":"लिंक विश्लेषण",
+            "videoTranscript":"वीडियो प्रतिलिपि","profile":"प्रोफ़ाइल","dashboard":"डैशबोर्ड","about":"बारे में","logout":"लॉगआउट",
+            "language":"भाषा","theme":"थीम","score":"विश्वसनीयता स्कोर","summary":"सारांश","sources":"सत्यापित स्रोत",
+            "category":"वर्ग","exportPDF":"PDF एक्सपोर्ट करें","feedback":"प्रतिक्रिया","contact":"संपर्क करें","history":"इतिहास",
+            "insights":"इनसाइट्स","resources":"संसाधन","how":"यह कैसे काम करता है","searchPlaceholder":"पाठ या URL चिपकाएँ..."
         },
         "te": {
-            "appName": "ట్రూథ్‌లెన్సు",
-            "tagline": "శబ్దం అందరి నుండి నిజాన్ని చూడండి.",
-            "verifyNow": "ఇప్పుడు నిర్ధారించండి",
-            "login": "లాగిన్",
-            "signup": "సైన్ అప్",
-            "email": "ఇమెయిల్",
-            "password": "పాస్‌వర్డ్",
-            "or": "లేదా",
-            "googleSignIn": "Googleతో సైన్ ఇన్ చేయండి",
-            "analyze": "విశ్లేషించండి",
-            "uploadImage": "చిత్రాన్ని అప్లోడ్ చేయండి",
-            "analyzeLink": "లింక్ విశ్లేషణ",
-            "videoTranscript": "వీడియో లిప్యంతరం",
-            "profile": "ప్రొఫైల్",
-            "dashboard": "డాష్బోర్డ్",
-            "about": "గురించి",
-            "logout": "లాగ్ అవుట్",
-            "language": "భాష",
-            "theme": "థీమ్",
-            "score": "నమ్మక స్థాయి",
-            "summary": "సారాంశం",
-            "sources": "నిజమైన మూలాలు",
-            "category": "వర్గం",
-            "exportPDF": "PDF ఎగుమతి చేయండి",
-            "feedback": "ప్రతిస్పందన",
-            "contact": "మమ్మల్ని సంప్రదించండి",
-            "yearSuffix": "ట్రూథ్‌లెన్సు • ప్రేమతో నిర్మించబడింది"
+            "appName":"ట్రూథ్‌లెన్సు","tagline":"శబ్దం అందరి నుండి నిజాన్ని చూడండి.","verifyNow":"ఇప్పుడు నిర్ధారించండి",
+            "login":"లాగిన్","signup":"సైన్ అప్","email":"ఇమెయిల్","password":"పాస్‌వర్డ్","or":"లేదా",
+            "googleSignIn":"Googleతో సైన్ ఇన్ చేయండి","analyze":"విశ్లేషించండి","uploadImage":"చిత్రాన్ని అప్లోడ్ చేయండి","analyzeLink":"లింక్ విశ్లేషణ",
+            "videoTranscript":"వీడియో లిప్యంతరం","profile":"ప్రొఫైల్","dashboard":"డాష్బోర్డ్","about":"గురించి","logout":"లాగ్ అవుట్",
+            "language":"భాష","theme":"థీమ్","score":"నమ్మక స్థాయి","summary":"సారాంశం","sources":"నిజమైన మూలాలు",
+            "category":"వర్ణన","exportPDF":"PDF ఎగుమతి చేయండి","feedback":"ప్రతిస్పందన","contact":"మమ్మల్ని సంప్రదించండి","history":"చరిత్ర",
+            "insights":"ఇన్సైట్","resources":"వనరులు","how":"ఇది ఎలా పనిచేస్తుంది","searchPlaceholder":"పాఠ్యం లేదా URL నిలిపివేయండి..."
         }
     }
     return jsonify(translations)
 
 # --------------------------
-# Error handlers
+# Errors
 # --------------------------
 @app.errorhandler(404)
 def not_found(e):
@@ -506,4 +472,4 @@ def server_error(e):
 # Run
 # --------------------------
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.getenv("PORT", 5000)), debug=True)
+    app.run(host="0.0.0.0", port=int(os.getenv("PORT", 5000)), debug=os.getenv("FLASK_ENV","development")=="development")

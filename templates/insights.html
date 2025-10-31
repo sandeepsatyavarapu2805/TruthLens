@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title data-i18n="insights">Insights — TruthLens</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='pro-style.css') }}">
+  <script defer src="{{ url_for('static', filename='pro-script.js') }}"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
+</head>
+<body>
+  {% include 'partials/navbar.html' %}
+  <main class="page-container">
+    <section class="glass-card animate-fade">
+      <h2 data-i18n="insights">Insights</h2>
+      <p class="muted">Visual credibility trends and top contributors (demo data).</p>
+      <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:18px;">
+        <div class="chart-card glass-card" style="flex:1;min-width:320px;">
+          <canvas id="scoreTrend"></canvas>
+        </div>
+        <div class="chart-card glass-card" style="width:360px;">
+          <h4>Top Contributors</h4>
+          <ul>
+            <li>Alice — 32 checks</li>
+            <li>Bob — 21 checks</li>
+            <li>Community — 12 checks</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    // demo Chart.js usage
+    window.addEventListener('DOMContentLoaded', ()=>{
+      const ctx = document.getElementById('scoreTrend').getContext('2d');
+      const chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: ['Day -6','-5','-4','-3','-2','-1','Today'],
+          datasets: [{ label: 'Average Credibility', data: [62,58,64,59,66,63,65], tension:0.3, fill:true }]
+        },
+        options:{responsive:true,plugins:{legend:{display:false}}}
+      });
+    });
+  </script>
+</body>
+</html>

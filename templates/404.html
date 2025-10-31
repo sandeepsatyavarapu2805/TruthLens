@@ -1,16 +1,14 @@
 <!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>404 Not Found — TruthLens</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-</head>
-<body data-theme="classic">
-  <main class="center-404 glass">
-    <h1>404</h1>
-    <p>Oops — the page you requested was not found.</p>
-    <a href="{{ url_for('index') }}" class="btn">Back to Home</a>
+<html>
+<head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1" /><title>404 — Not found</title><link rel="stylesheet" href="{{ url_for('static', filename='pro-style.css') }}"></head>
+<body>
+  {% include 'partials/navbar.html' %}
+  <main class="page-container">
+    <section class="glass-card center">
+      <h1>404</h1>
+      <p>Page not found.</p>
+      <a href="/" class="btn-primary">Go Home</a>
+    </section>
   </main>
 </body>
 </html>

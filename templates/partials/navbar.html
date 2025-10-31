@@ -1,0 +1,22 @@
+<nav class="topnav glass-nav">
+  <div class="nav-left">
+    <a class="brand" href="/"><span class="logo">TL</span> <span class="brand-text" data-i18n="appName">TruthLens</span></a>
+    <div class="muted tagline" data-i18n="tagline">See the Truth Beyond the Noise.</div>
+  </div>
+  <div class="nav-right">
+    <div class="selector">
+      <select id="langSelect" class="nice-select"></select>
+    </div>
+    <div class="selector">
+      <select id="themeSelect" class="nice-select"></select>
+    </div>
+    {% if current_user.is_authenticated %}
+      <a href="/profile" class="link small" data-i18n="profile">Profile</a>
+      <a href="/logout" class="link small" data-i18n="logout">Logout</a>
+    {% else %}
+      <a href="{{ url_for('google.login') }}" class="link small"><img src="https://developers.google.com/identity/images/g-logo.png" width="18"> <span data-i18n="googleSignIn">Sign in with Google</span></a>
+      <a href="/login" class="link small" data-i18n="login">Login</a>
+      <a href="/signup" class="link small" data-i18n="signup">Sign Up</a>
+    {% endif %}
+  </div>
+</nav>

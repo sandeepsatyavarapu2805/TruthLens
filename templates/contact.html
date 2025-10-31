@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title data-i18n="about">About — TruthLens</title>
+  <title>Contact — TruthLens</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='pro-style.css') }}">
   <script defer src="{{ url_for('static', filename='pro-script.js') }}"></script>
 </head>
@@ -11,8 +11,12 @@
   {% include 'partials/navbar.html' %}
   <main class="page-container">
     <section class="glass-card animate-fade">
-      <h1>About TruthLens</h1>
-      <p>TruthLens helps detect misinformation and AI-generated media. Built with privacy-first principles.</p>
+      <h2>Contact</h2>
+      <form method="post" action="/contact">
+        <input name="email" placeholder="you@example.com" />
+        <textarea name="message" placeholder="Your message"></textarea>
+        <button class="btn-primary">Send</button>
+      </form>
     </section>
   </main>
 </body>

@@ -8,4 +8,3 @@ gunicorn
 python-dotenv
 reportlab
 js2py
-Flask-Talisman

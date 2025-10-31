@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title data-i18n="analyze">Analyze — TruthLens</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='pro-style.css') }}">
+  <script defer src="{{ url_for('static', filename='pro-script.js') }}"></script>
+</head>
+<body>
+  {% include 'partials/navbar.html' %}
+  <main class="page-container">
+    <section class="analyze-top glass-card animate-fade">
+      <h2 data-i18n="analyze">Analyze</h2>
+      <div class="analyze-grid">
+        <div class="input-col">
+          <label class="label">Text / URL</label>
+          <textarea id="inputContent" placeholder="" aria-label="input"></textarea>
+          <div class="row" style="margin-top:8px;">
+            <button id="btnAnalyzeText" class="btn-primary">Analyze Text</button>
+            <button id="btnClear" class="btn-ghost">Clear</button>
+            <button id="btnCopy" class="btn-ghost">Copy</button>
+          </div>
+
+          <label class="label" style="margin-top:14px;">Upload Image / Video</label>
+          <input id="fileInput" type="file" accept="image/*,video/*" />
+          <div class="row" style="margin-top:8px;">
+            <button id="btnAnalyzeFile" class="btn-primary">Analyze Media</button>
+            <button id="btnResetFile" class="btn-ghost">Reset</button>
+          </div>
+
+          <label class="label" style="margin-top:14px;">Video Transcript</label>
+          <textarea id="transcriptInput" rows="4"></textarea>
+          <div class="row" style="margin-top:8px;">
+            <button id="btnAnalyzeTranscript" class="btn-primary">Analyze Transcript</button>
+          </div>
+
+          <div class="tips glass-card small muted" style="margin-top:14px;">
+            <strong>Tips:</strong> Add context (source, date) to improve analysis. Use the mic to dictate text.
+          </div>
+        </div>
+
+        <div class="results-col">
+          <div class="results-header">
+            <h3>Latest Result</h3>
+            <div class="actions">
+              <button id="btnExportPDF" class="btn-ghost">Export PDF</button>
+              <button id="btnShare" class="btn-ghost">Share</button>
+            </div>
+          </div>
+          <div id="resultsArea" class="results-area animate-stagger">
+            <div class="placeholder muted">No results yet — run an analysis.</div>
+          </div>
+
+          <div class="history-card glass-card">
+            <h4>Your Recent Checks</h4>
+            <div id="historyList" class="history-list">
+              <div class="muted">Loading recent checks…</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
