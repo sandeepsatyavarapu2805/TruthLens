@@ -3,328 +3,115 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>TruthLens — Quick Check</title>
+  <title>TruthLens — Verify news, images & videos</title>
   <link rel="icon" href="/static/logo.png" />
-  <style>
-    /* Minimal modern styles (mobile-first). Tweak colors as you like. */
-    :root{
-      --bg: #f8fafc; --card:#ffffff; --muted:#64748b; --accent:#4f46e5;
-      --good:#16a34a; --bad:#dc2626; --warn:#f59e0b;
-    }
-    html,body{height:100%;margin:0;font-family:Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;}
-    body{background:linear-gradient(180deg, #f8fafc, #ffffff); color:#0f172a;}
-    .wrap{max-width:980px;margin:28px auto;padding:18px;}
-    .card{background:var(--card);border-radius:12px;padding:18px;box-shadow:0 6px 18px rgba(15,23,42,0.06);}
-    header .brand{display:flex;align-items:center;gap:12px;}
-    .logo{width:52px;height:52px;border-radius:10px;background:linear-gradient(135deg,var(--accent),#06b6d4);display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:18px;}
-    h1{margin:0;font-size:20px;}
-    p.lead{margin:6px 0 0;color:var(--muted);font-size:13px;}
-    textarea,input[type="text"]{width:100%;padding:12px;border-radius:8px;border:1px solid #e6eef8;background:#fbfdff;box-sizing:border-box;}
-    .row{display:flex;gap:12px;align-items:center;}
-    .btn{background:var(--accent);color:white;padding:10px 14px;border-radius:8px;border:none;cursor:pointer;font-weight:600;}
-    .btn.secondary{background:transparent;border:1px solid #e6eef8;color:var(--muted);font-weight:600;}
-    .small{font-size:13px;color:var(--muted);}
-    .result{margin-top:14px;padding:14px;border-radius:10px;}
-    .score{font-family:monospace;font-weight:700;padding:6px 10px;border-radius:8px;display:inline-block;}
-    .green{background:#ecfdf5;color:var(--good);border:1px solid rgba(16,185,129,0.08);}
-    .red{background:#fff1f2;color:var(--bad);border:1px solid rgba(220,38,38,0.06);}
-    .amber{background:#fff7ed;color:var(--warn);border:1px solid rgba(245,158,11,0.06);}
-    .history{margin-top:12px;max-height:180px;overflow:auto;padding-right:6px;}
-    .history-item{padding:8px;border-radius:8px;border:1px solid #f1f5f9;margin-bottom:8px;cursor:pointer;}
-    .grid{display:grid;grid-template-columns:1fr;gap:12px;}
-    @media(min-width:900px){ .grid{grid-template-columns:1fr 320px;} }
-  </style>
+  <link rel="stylesheet" href="/static/style.css" />
 </head>
 <body>
-  <div class="wrap">
-    <div class="card" role="banner">
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
-        <div>
-          <div class="brand">
-            <div class="logo">TL</div>
-            <div>
-              <h1>TruthLens</h1>
-              <p class="lead">Quickly check messages, links, images & short videos.</p>
+  <div id="app" class="page">
+    <nav class="nav">
+      <div class="nav-left">
+        <div class="logo">TL</div>
+        <div class="brand">
+          <div class="brand-title">TruthLens</div>
+          <div class="brand-sub">Verify faster — learn to trust sources</div>
+        </div>
+      </div>
+      <div class="nav-right">
+        <button id="themeToggle" class="btn ghost">Dark</button>
+        <select id="lang" class="select">
+          <option value="en">EN</option>
+          <option value="hi">हिन्दी</option>
+          <option value="te">తెలుగు</option>
+          <option value="ta">தமிழ்</option>
+        </select>
+      </div>
+    </nav>
+
+    <main class="container">
+      <section class="card hero">
+        <div class="hero-left">
+          <h1>Check headlines, messages & media instantly</h1>
+          <p class="muted">Paste text or a URL, or upload an image/video. We'll combine fact-checks, heuristics and media matches to give a clear verdict.</p>
+
+          <div class="field">
+            <label class="label">Text or URL</label>
+            <textarea id="inputText" placeholder="Paste message, headline or a URL here..." rows="5"></textarea>
+          </div>
+
+          <div class="row">
+            <div style="flex:1">
+              <button id="checkBtn" class="btn primary">Check now</button>
+              <button id="clearBtn" class="btn ghost">Clear</button>
+            </div>
+            <div style="min-width:220px">
+              <div class="small muted">Last checked: <span id="lastChecked">—</span></div>
             </div>
           </div>
+
+          <div id="resultBox" class="result-box mt"></div>
         </div>
-        <div style="text-align:right">
-          <div class="small">Beta • Multilingual</div>
-          <div style="margin-top:6px;">
-            <select id="lang" aria-label="Language">
-              <option value="en">EN</option>
-              <option value="hi">हिन्दी</option>
-              <option value="te">తెలుగు</option>
-              <option value="ta">தமிழ்</option>
-            </select>
+
+        <aside class="hero-right">
+          <div class="card small">
+            <h3>Media Scan</h3>
+            <div class="small muted">Upload an image or a short video for prototype analysis.</div>
+            <input id="fileInput" type="file" accept="image/*,video/*" />
+            <div id="preview" class="preview mt"></div>
+            <div class="row mt">
+              <button id="analyzeBtn" class="btn primary">Analyze media</button>
+              <button id="resetMediaBtn" class="btn ghost">Reset</button>
+            </div>
           </div>
-        </div>
-      </div>
-    </div>
 
-    <div style="height:14px"></div>
+          <div class="card small mt">
+            <h3>Quick tips</h3>
+            <ul class="tips">
+              <li>Check URLs (hover to inspect) before sharing.</li>
+              <li>Beware of sensational language like "shocking" or "exclusive".</li>
+              <li>Use local language explanations for communities.</li>
+            </ul>
+          </div>
+        </aside>
+      </section>
 
-    <div class="grid">
-      <div class="card" role="main">
-        <div style="display:flex;justify-content:space-between;align-items:center">
+      <section class="card history mt">
+        <div class="history-header">
+          <h3>History</h3>
           <div>
-            <h2 style="margin:0 0 6px 0">Paste text or URL</h2>
-            <div class="small">Paste the WhatsApp message, headline or URL you want to verify.</div>
-          </div>
-          <div style="text-align:right">
-            <div class="small">Made for schools & communities</div>
+            <button id="clearHistory" class="btn ghost">Clear</button>
+            <button id="exportHistory" class="btn ghost">Export</button>
           </div>
         </div>
+        <div id="historyList" class="history-list"></div>
+      </section>
 
-        <div style="height:10px"></div>
-        <textarea id="input" rows="7" placeholder="Paste text or a URL here..."></textarea>
-
-        <div style="height:10px"></div>
-
-        <div style="display:flex;gap:8px;align-items:center">
-          <button id="checkBtn" class="btn">Check now</button>
-          <button id="clearBtn" class="btn secondary">Clear</button>
-          <button id="copyBtn" class="btn secondary">Copy</button>
-          <div style="flex:1"></div>
-          <div class="small">Last checked: <span id="lastChecked">—</span></div>
+      <section class="card learn mt">
+        <h3>Digital Awareness for Schools</h3>
+        <p class="muted">Short lessons and classroom packs can help students identify misleading content. Share this app with teachers.</p>
+        <div class="features">
+          <div class="feature">
+            <strong>Micro-lessons</strong>
+            <div class="small muted">Short videos & activities for classrooms.</div>
+          </div>
+          <div class="feature">
+            <strong>Community Groups</strong>
+            <div class="small muted">Local student volunteers can moderate and verify reports.</div>
+          </div>
+          <div class="feature">
+            <strong>Report flow</strong>
+            <div class="small muted">Users can flag suspicious items for manual review.</div>
+          </div>
         </div>
+      </section>
 
-        <div id="resultArea" style="margin-top:12px;"></div>
+    </main>
 
-        <div style="height:12px"></div>
-
-        <div>
-          <strong>History</strong>
-          <div class="history" id="history"></div>
-        </div>
-      </div>
-
-      <aside class="card" aria-label="Media scan & tips">
-        <h3 style="margin-top:0">Scan Image / Video</h3>
-        <div class="small">Upload a photo or short video to run a prototype media analysis.</div>
-
-        <div style="height:10px"></div>
-        <input id="fileInput" type="file" accept="image/*,video/*" />
-        <div id="preview" style="margin-top:8px"></div>
-
-        <div style="height:10px"></div>
-        <div style="display:flex;gap:8px">
-          <button id="scanBtn" class="btn">Analyze media</button>
-          <button id="resetBtn" class="btn secondary">Reset</button>
-        </div>
-
-        <div style="height:12px"></div>
-
-        <div style="border-top:1px dashed #eef2ff;padding-top:10px">
-          <strong>How it works</strong>
-          <p class="small">We combine database matches with simple signals (sensational language, domain reputation). Media analysis is prototype-level — integrate Google Vision/TinEye for production.</p>
-        </div>
-      </aside>
-    </div>
-
-    <div style="height:18px"></div>
-
-    <div style="text-align:center;color:#94a3b8;font-size:13px">Built with ♥ — TruthLens • Not legal advice. Always verify primary sources.</div>
+    <footer class="footer">
+      © <span id="year"></span> TruthLens — Automated tools only. Always confirm with primary sources.
+    </footer>
   </div>
 
-<script>
-/* Minimal frontend logic: calls /api/factcheck/text and /api/factcheck/media */
-
-const inputEl = document.getElementById('input');
-const checkBtn = document.getElementById('checkBtn');
-const resultArea = document.getElementById('resultArea');
-const historyEl = document.getElementById('history');
-const langEl = document.getElementById('lang');
-const lastCheckedEl = document.getElementById('lastChecked');
-const copyBtn = document.getElementById('copyBtn');
-const clearBtn = document.getElementById('clearBtn');
-
-const fileInput = document.getElementById('fileInput');
-const preview = document.getElementById('preview');
-const scanBtn = document.getElementById('scanBtn');
-const resetBtn = document.getElementById('resetBtn');
-
-const LOCAL_KEY = 'truthlens_history_v1';
-let history = JSON.parse(localStorage.getItem(LOCAL_KEY) || '[]');
-
-function setLastChecked(ts){
-  lastCheckedEl.textContent = ts ? new Date(ts).toLocaleString() : '—';
-}
-
-function renderHistory(){
-  historyEl.innerHTML = '';
-  if (!history.length){
-    historyEl.innerHTML = '<div class="small" style="color:#94a3b8">No history yet.</div>';
-    return;
-  }
-  history.forEach((h, idx)=> {
-    const d = document.createElement('div');
-    d.className = 'history-item';
-    d.title = h.input;
-    d.innerHTML = `<div style="font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${h.input}</div>
-                   <div class="small" style="margin-top:6px;color:#94a3b8;font-size:12px">${new Date(h.date).toLocaleString()}</div>`;
-    d.onclick = ()=> {
-      inputEl.value = h.input;
-      renderResult(h.result);
-    };
-    historyEl.appendChild(d);
-  });
-}
-
-function saveHistory(inputText, result){
-  const item = { id: Date.now(), input: inputText, date: new Date().toISOString(), result };
-  history.unshift(item);
-  history = history.slice(0, 25);
-  localStorage.setItem(LOCAL_KEY, JSON.stringify(history));
-  renderHistory();
-  setLastChecked(item.date);
-}
-
-function renderResult(data){
-  if(!data) { resultArea.innerHTML = ''; return; }
-  if (data.error){
-    resultArea.innerHTML = `<div class="result red">${escapeHtml(data.error)}</div>`;
-    return;
-  }
-  const score = data.score ?? '--';
-  const verdict = data.verdict ?? 'Unclear';
-  const heuristics = (data.heuristics || []).join(', ');
-  const sources = (data.sources || []);
-  const explanation = data.explanation || '';
-
-  const colorClass = score >= 70 ? 'green' : score <= 40 ? 'red' : 'amber';
-  let html = `<div class="result ${colorClass}">
-    <div style="display:flex;justify-content:space-between;align-items:center">
-      <div><strong>${escapeHtml(verdict)}</strong></div>
-      <div class="score">${escapeHtml(String(score))}</div>
-    </div>
-    <div style="margin-top:8px;color:#475569">${escapeHtml(explanation)}</div>
-    `;
-
-  if (heuristics) html += `<div style="margin-top:8px"><strong>Signals:</strong> ${escapeHtml(heuristics)}</div>`;
-  if (sources.length){
-    html += '<div style="margin-top:8px"><strong>Sources</strong><ul>';
-    for (const s of sources){
-      const title = escapeHtml((s.source || 'source') + ' — ' + (s.verdict||''));
-      const url = s.url ? `<a href="${escapeAttr(s.url)}" target="_blank" rel="noreferrer">link</a>` : '';
-      html += `<li style="margin-top:6px">${title} ${url}</li>`;
-    }
-    html += '</ul></div>';
-  }
-  html += '</div>';
-  resultArea.innerHTML = html;
-}
-
-function escapeHtml(s){ return String(s).replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[m]); }
-function escapeAttr(s){ return String(s).replace(/"/g, '&quot;'); }
-
-async function checkNow(){
-  const text = inputEl.value.trim();
-  if (!text) { alert('Paste text or URL first'); return; }
-  checkBtn.disabled = true;
-  checkBtn.textContent = 'Checking...';
-  renderResult(null);
-  try {
-    const payload = { text, lang: langEl.value || 'en' };
-    const res = await fetch('/api/factcheck/text', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify(payload)
-    });
-    const data = await res.json();
-    renderResult(data);
-    saveHistory(text, data);
-  } catch (e) {
-    renderResult({ error: 'Network or server error' });
-    console.error(e);
-  } finally {
-    checkBtn.disabled = false;
-    checkBtn.textContent = 'Check now';
-  }
-}
-
-copyBtn.onclick = ()=> {
-  navigator.clipboard?.writeText(inputEl.value || '').then(()=> alert('Copied'));
-};
-
-clearBtn.onclick = ()=> {
-  inputEl.value = '';
-  renderResult(null);
-};
-
-checkBtn.onclick = checkNow;
-
-// media upload handlers
-let selectedFile = null;
-fileInput.onchange = (ev) => {
-  const f = ev.target.files && ev.target.files[0];
-  selectedFile = f || null;
-  preview.innerHTML = '';
-  if (!f) return;
-  if (f.type.startsWith('image/')){
-    const img = document.createElement('img');
-    img.src = URL.createObjectURL(f);
-    img.style.maxWidth = '100%';
-    img.style.borderRadius = '8px';
-    preview.appendChild(img);
-  } else {
-    const v = document.createElement('video');
-    v.src = URL.createObjectURL(f);
-    v.controls = true; v.style.maxWidth = '100%'; v.style.borderRadius='8px';
-    preview.appendChild(v);
-  }
-};
-
-resetBtn.onclick = ()=> {
-  fileInput.value = '';
-  selectedFile = null;
-  preview.innerHTML = '';
-};
-
-async function analyzeMedia(){
-  if (!selectedFile) { alert('Select a file first'); return; }
-  scanBtn.disabled = true;
-  scanBtn.textContent = 'Analyzing...';
-  resultArea.innerHTML = '';
-  try {
-    const isImage = selectedFile.type.startsWith('image/');
-    // read as base64
-    const b64 = await fileToBase64(selectedFile);
-    // send JSON with b64 (server supports form-data too)
-    const payload = { b64: b64.split(',')[1] }; // remove data: prefix
-    const res = await fetch('/api/factcheck/media', {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify(payload)
-    });
-    const data = await res.json();
-    // show media result in resultArea
-    renderResult(data);
-    saveHistory('[media upload]', data);
-  } catch (e) {
-    console.error(e);
-    renderResult({ error: 'Media analysis failed' });
-  } finally {
-    scanBtn.disabled = false;
-    scanBtn.textContent = 'Analyze media';
-  }
-}
-
-scanBtn.onclick = analyzeMedia;
-
-function fileToBase64(file){
-  return new Promise((res, rej) => {
-    const reader = new FileReader();
-    reader.onload = ()=> res(reader.result);
-    reader.onerror = ()=> rej('read error');
-    reader.readAsDataURL(file);
-  });
-}
-
-// initial render
-renderHistory();
-setLastChecked(null);
-
-</script>
+  <script src="/static/script.js"></script>
 </body>
 </html>
