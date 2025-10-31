@@ -1,8 +1,11 @@
-Flask==3.0.3
-flask-cors==4.0.1
-requests==2.32.3
-beautifulsoup4==4.12.3
-Pillow==10.4.0
-google-generativeai==0.8.5
-gunicorn==23.0.0
-python-dotenv==1.0.0
+Flask
+Flask-Cors
+Flask-Login
+Flask-Dance
+google-generativeai
+requests
+gunicorn
+python-dotenv
+reportlab
+js2py
+# sqlite3 is part of stdlib (no pip install needed)

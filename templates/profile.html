@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Profile — TruthLens</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body data-theme="{{ user_row['theme'] if user_row else 'ocean' }}">
+  <nav class="navbar glass">
+    <div class="brand">TruthLens</div>
+    <div class="nav-right">
+      <a href="{{ url_for('dashboard') }}" class="btn">Dashboard</a>
+      <a href="{{ url_for('logout') }}" class="btn">Logout</a>
+    </div>
+  </nav>
+
+  <main class="profile-page">
+    <section class="profile-card glass">
+      <div class="profile-left">
+        <img class="avatar" src="{{ user_row['avatar'] or url_for('static', filename='avatar-default.png') }}" alt="avatar" />
+      </div>
+      <div class="profile-right">
+        <h2>{{ user_row['name'] or user_row['email'] }}</h2>
+        <p class="small">Joined: {{ user_row['created_at'] }}</p>
+        <p id="user-bio">{{ user_row['bio'] or 'No bio yet.' }}</p>
+        <div class="profile-actions">
+          <button id="edit-profile" class="btn">Edit</button>
+          <button id="change-theme" class="btn">Set Theme</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="history-list glass">
+      <h3>Recent Analyses</h3>
+      <div class="history-cards">
+        {% for a in analyses %}
+          <div class="history-card">
+            <div class="h-head">
+              <strong>{{ a['input_type'] | capitalize }}</strong>
+              <span class="muted">{{ a['created_at'] }}</span>
+            </div>
+            <div class="h-body">
+              {% set r = a['result_json'] | safe %}
+              {% set parsed = r | loads %}
+              <div>Score: {{ parsed.get('credibility_score', '—') }}</div>
+              <div>Category: {{ parsed.get('category', '—') }}</div>
+            </div>
+          </div>
+        {% else %}
+          <p>No analyses yet — try the dashboard.</p>
+        {% endfor %}
+      </div>
+    </section>
+  </main>
+
+  <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>

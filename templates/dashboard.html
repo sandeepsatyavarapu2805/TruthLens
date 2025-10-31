@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Dashboard — TruthLens</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body data-theme="ocean">
+  <nav class="navbar glass">
+    <div class="brand">TruthLens</div>
+    <div class="nav-right">
+      <a href="{{ url_for('profile') }}" class="btn">Profile</a>
+      <a href="{{ url_for('about') }}" class="btn">About</a>
+      <button id="fab-verify" class="fab" title="Quick Verify">⚡</button>
+    </div>
+  </nav>
+
+  <aside class="sidebar glass">
+    <div class="sidebar-inner">
+      <h3>Tools</h3>
+      <ul>
+        <li><a href="#text-tab" class="active tab-link">Text / Article</a></li>
+        <li><a href="#link-tab" class="tab-link">Link</a></li>
+        <li><a href="#image-tab" class="tab-link">Image</a></li>
+        <li><a href="#video-tab" class="tab-link">Video</a></li>
+      </ul>
+
+      <hr/>
+      <h4>Options</h4>
+      <div>
+        <label>Theme</label>
+        <select id="theme-select">
+          <option value="ocean">Ocean Blue</option><option value="emerald">Emerald Green</option>
+          <option value="crimson">Crimson Red</option><option value="midnight">Midnight Dark</option>
+          <option value="classic">Classic Light</option><option value="royal">Royal Purple</option>
+        </select>
+      </div>
+
+      <div>
+        <label>Language</label>
+        <select id="lang-select"><option value="en">English</option><option value="hi">हिंदी</option><option value="te">తెలుగు</option></select>
+      </div>
+    </div>
+  </aside>
+
+  <main class="dashboard-main">
+    <section id="tool-area" class="glass">
+      <div id="tabs">
+        <!-- TEXT TAB -->
+        <div id="text-tab" class="tab active">
+          <h2>Text / Article Verification</h2>
+          <textarea id="text-input" placeholder="Paste article text or caption here..." rows="8"></textarea>
+          <div class="tool-actions">
+            <button id="analyze-text" class="btn btn-primary">Analyze</button>
+            <button id="clear-text" class="btn btn-ghost">Clear</button>
+          </div>
+        </div>
+
+        <!-- LINK TAB -->
+        <div id="link-tab" class="tab">
+          <h2>Link Analysis</h2>
+          <input id="link-input" placeholder="Paste article link (https://...)" />
+          <div class="tool-actions">
+            <button id="analyze-link" class="btn btn-primary">Analyze Link</button>
+          </div>
+        </div>
+
+        <!-- IMAGE TAB -->
+        <div id="image-tab" class="tab">
+          <h2>Image Verification</h2>
+          <input id="image-file" type="file" accept="image/*,video/*" />
+          <div class="tool-actions">
+            <button id="analyze-image" class="btn btn-primary">Analyze Image</button>
+          </div>
+        </div>
+
+        <!-- VIDEO TAB -->
+        <div id="video-tab" class="tab">
+          <h2>Video Claim Check</h2>
+          <input id="video-url" placeholder="Paste video URL (YouTube / link with transcript)" />
+          <textarea id="video-transcript" placeholder="Or paste transcript / captions..." rows="6"></textarea>
+          <div class="tool-actions">
+            <button id="analyze-video" class="btn btn-primary">Analyze Video</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="result-area" class="glass">
+      <div id="result-card" class="card">
+        <div id="result-header">
+          <h3 id="result-title">No results yet</h3>
+          <div id="result-meta">
+            <span id="trust-badge" class="badge neutral">—</span>
+            <button id="download-pdf" class="btn btn-outline">Export PDF</button>
+            <div class="share-buttons">
+              <button id="share-whatsapp" class="btn">WhatsApp</button>
+              <button id="share-twitter" class="btn">Twitter</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="result-body">
+          <div class="score-area">
+            <div class="score-label">Credibility</div>
+            <div class="progress">
+              <div id="credibility-bar" class="progress-bar" style="width: 0%"></div>
+            </div>
+            <canvas id="score-breakdown" width="300" height="140"></canvas>
+          </div>
+
+          <div class="summary-area">
+            <h4>Summary</h4>
+            <p id="result-summary"></p>
+            <h4>Explanation</h4>
+            <p id="result-explanation"></p>
+            <h4>Verified Sources</h4>
+            <ul id="result-sources"></ul>
+          </div>
+
+          <div class="actions-area">
+            <button id="bookmark-result" class="btn">Bookmark</button>
+            <button id="feedback-good" class="btn btn-success">Helpful</button>
+            <button id="feedback-bad" class="btn btn-danger">Not helpful</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div id="toast" class="toast"></div>
+
+  <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>

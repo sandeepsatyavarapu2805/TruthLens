@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Sign Up — TruthLens</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body data-theme="ocean">
+  <nav class="navbar">
+    <div class="brand">TruthLens</div>
+  </nav>
+
+  <main class="auth-page glass">
+    <h2 id="signup-title">Create your account</h2>
+    <form method="POST" action="{{ url_for('signup') }}" class="auth-form">
+      <label>Full Name</label>
+      <input name="name" type="text" required />
+      <label>Email</label>
+      <input name="email" type="email" required />
+      <label>Password</label>
+      <input name="password" type="password" required />
+      <div class="auth-actions">
+        <button type="submit" class="btn btn-primary">Sign Up</button>
+        <a href="{{ url_for('login') }}" class="btn btn-link">Already have an account?</a>
+      </div>
+    </form>
+    <div class="oauth">
+      <p>Or continue with</p>
+      <a href="{{ url_for('google.login') }}" class="btn btn-google">Google</a>
+    </div>
+  </main>
+
+  <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
