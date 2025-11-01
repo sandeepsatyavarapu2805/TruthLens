@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TruthLens | {{ title if title else "AI-Powered Fact Checker" }}</title>
+
+  <!-- Tailwind CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+  <!-- Favicon -->
+  <link rel="icon" href="{{ url_for('static', filename='logo.png') }}" />
+
+  <!-- Custom Styles -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='pro-style.css') }}">
+</head>
+
+<body class="font-[Poppins] bg-gradient-to-br from-slate-950 via-indigo-950 to-black text-white min-h-screen transition-all duration-700">
+
+  <!-- Navbar -->
+  {% include 'partials/navbar.html' %}
+
+  <!-- Page Content -->
+  <main class="pt-20 px-6 md:px-10 fade-in">
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- Footer -->
+  <footer class="text-center text-sm text-gray-400 mt-10 pb-4 opacity-75">
+    © {{ 2025 }} TruthLens — All Rights Reserved
+  </footer>
+
+  <!-- Script -->
+  <script src="{{ url_for('static', filename='pro-script.js') }}"></script>
+</body>
+</html>

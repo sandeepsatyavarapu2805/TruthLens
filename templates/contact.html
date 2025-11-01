@@ -1,23 +1,24 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Contact — TruthLens</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='pro-style.css') }}">
-  <script defer src="{{ url_for('static', filename='pro-script.js') }}"></script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Contact | TruthLens</title>
+  <link rel="icon" href="{{ url_for('static', filename='logo.png') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
-<body>
+<body class="bg-gradient-to-br from-[#0f172a] via-[#1e293b] to-[#0f172a] text-white">
   {% include 'partials/navbar.html' %}
-  <main class="page-container">
-    <section class="glass-card animate-fade">
-      <h2>Contact</h2>
-      <form method="post" action="/contact">
-        <input name="email" placeholder="you@example.com" />
-        <textarea name="message" placeholder="Your message"></textarea>
-        <button class="btn-primary">Send</button>
-      </form>
-    </section>
+  <main class="max-w-3xl mx-auto px-6 py-16 animate-fade-up">
+    <h1 class="text-4xl font-bold mb-6 text-emerald-400">Contact Us</h1>
+    <p class="text-gray-300 mb-8">We’d love to hear your feedback, suggestions, or questions.</p>
+
+    <form action="#" method="post" class="glass-card p-8 rounded-2xl shadow-xl flex flex-col gap-4">
+      <input type="text" name="name" placeholder="Your Name" required class="input">
+      <input type="email" name="email" placeholder="Your Email" required class="input">
+      <textarea name="message" placeholder="Your Message" rows="5" class="input"></textarea>
+      <button type="submit" class="btn-primary hover:scale-105 transition-transform">📨 Send Message</button>
+    </form>
   </main>
 </body>
 </html>

@@ -1,13 +1,17 @@
+# ==============================
+# TruthLens Pro — render.yaml
+# ==============================
 services:
   - type: web
     name: truthlens
     env: python
     buildCommand: pip install -r requirements.txt
     startCommand: gunicorn app:app
+    plan: free
     envVars:
       - key: GEMINI_API_KEY
         sync: false
-      - key: SECRET_KEY
+      - key: FLASK_SECRET_KEY
         sync: false
       - key: GOOGLE_CLIENT_ID
         sync: false

@@ -1,14 +1,17 @@
 <!doctype html>
-<html>
-<head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1" /><title>404 — Not found</title><link rel="stylesheet" href="{{ url_for('static', filename='pro-style.css') }}"></head>
-<body>
-  {% include 'partials/navbar.html' %}
-  <main class="page-container">
-    <section class="glass-card center">
-      <h1>404</h1>
-      <p>Page not found.</p>
-      <a href="/" class="btn-primary">Go Home</a>
-    </section>
-  </main>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>404 - Page Not Found | TruthLens</title>
+  <link rel="icon" href="{{ url_for('static', filename='logo.png') }}" type="image/png">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="bg-gradient-to-br from-[#0f172a] via-[#1e293b] to-[#0f172a] flex items-center justify-center h-screen text-white font-inter">
+  <div class="glass-card text-center p-10 rounded-3xl shadow-xl animate-fade">
+    <h1 class="text-6xl font-bold text-sky-400 mb-4">404</h1>
+    <p class="text-gray-300 text-lg mb-6">Oops! The page you're looking for doesn't exist.</p>
+    <a href="/" class="btn-primary hover:scale-105 transition-transform">🏠 Go Home</a>
+  </div>
 </body>
 </html>

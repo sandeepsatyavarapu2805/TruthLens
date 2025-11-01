@@ -1,19 +1,57 @@
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title data-i18n="about">About — TruthLens</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='pro-style.css') }}">
-  <script defer src="{{ url_for('static', filename='pro-script.js') }}"></script>
-</head>
-<body>
-  {% include 'partials/navbar.html' %}
-  <main class="page-container">
-    <section class="glass-card animate-fade">
-      <h1>About TruthLens</h1>
-      <p>TruthLens helps detect misinformation and AI-generated media. Built with privacy-first principles.</p>
-    </section>
-  </main>
-</body>
-</html>
+{% extends "base.html" %}
+{% block content %}
+
+<section class="min-h-screen pt-24 pb-16 px-6 bg-gradient-to-br from-[#0f172a] via-[#1e293b] to-[#0f172a] text-gray-100">
+  <div class="max-w-4xl mx-auto text-center">
+
+    <!-- Header -->
+    <h1 class="text-4xl font-bold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-sky-400 to-indigo-400 animate-textGlow">
+      About TruthLens
+    </h1>
+    <p class="text-gray-400 text-lg mb-10">
+      TruthLens helps you verify facts, identify misinformation, and see the truth beyond the noise — powered by advanced AI.
+    </p>
+
+    <!-- Mission Section -->
+    <div class="glass-card rounded-2xl p-8 text-left mb-12 animate-fade-up">
+      <h2 class="text-2xl font-semibold mb-3 text-sky-400">Our Mission</h2>
+      <p class="text-gray-300 leading-relaxed">
+        In a world flooded with misinformation, <strong>TruthLens</strong> empowers users to critically evaluate the credibility of content shared across
+        social media, news, and public platforms. By combining AI-driven analysis with trusted fact-checking sources, we make
+        truth accessible to everyone.
+      </p>
+    </div>
+
+    <!-- How it Works -->
+    <div class="glass-card rounded-2xl p-8 text-left mb-12 animate-fade-up">
+      <h2 class="text-2xl font-semibold mb-3 text-emerald-400">How It Works</h2>
+      <ol class="list-decimal list-inside space-y-3 text-gray-300 leading-relaxed">
+        <li>Submit a message, link, image, or video transcript for verification.</li>
+        <li>TruthLens uses <strong>Google Gemini AI</strong> to analyze the content’s factual consistency and source credibility.</li>
+        <li>Get a <strong>credibility score</strong>, a detailed summary, and trusted source references in seconds.</li>
+      </ol>
+    </div>
+
+    <!-- Why Choose Us -->
+    <div class="glass-card rounded-2xl p-8 text-left animate-fade-up">
+      <h2 class="text-2xl font-semibold mb-3 text-pink-400">Why TruthLens?</h2>
+      <ul class="list-disc list-inside space-y-2 text-gray-300">
+        <li>⚙️ AI-Powered Analysis (Text, Image, Video)</li>
+        <li>🌍 Supports multiple languages & color themes</li>
+        <li>🔐 Secure login with Google OAuth</li>
+        <li>📜 Saves and manages your verification history</li>
+        <li>💡 Built for awareness, education, and digital responsibility</li>
+      </ul>
+    </div>
+
+    <!-- CTA -->
+    <div class="mt-12">
+      <a href="/analyze" class="btn-primary px-8 py-3 rounded-lg bg-sky-600 hover:bg-sky-700 transition">
+        🔍 Try TruthLens Now
+      </a>
+    </div>
+
+  </div>
+</section>
+
+{% endblock %}

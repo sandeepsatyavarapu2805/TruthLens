@@ -6,61 +6,162 @@
   <title data-i18n="appName">TruthLens</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='pro-style.css') }}">
   <script defer src="{{ url_for('static', filename='pro-script.js') }}"></script>
+  <style>
+    /* --- Gradient Background Animation --- */
+    body {
+      background: linear-gradient(-45deg, #1e3a8a, #0f172a, #111827, #1e40af);
+      background-size: 400% 400%;
+      animation: gradientBG 12s ease infinite;
+    }
+    @keyframes gradientBG {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    /* --- Floating Hero Elements --- */
+    .float {
+      animation: float 6s ease-in-out infinite;
+    }
+    @keyframes float {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-10px); }
+    }
+
+    /* --- Fade + Slide Animations --- */
+    .animate-fade { opacity: 0; transform: translateY(20px); transition: all 0.8s ease; }
+    .animate-fade.visible { opacity: 1; transform: translateY(0); }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #2563eb, #4f46e5);
+      color: white;
+      border-radius: 9999px;
+      padding: 0.75rem 2rem;
+      font-weight: 600;
+      transition: 0.3s ease;
+      box-shadow: 0 0 20px rgba(37,99,235,0.3);
+    }
+    .btn-primary:hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 25px rgba(99,102,241,0.5);
+    }
+
+    .btn-ghost {
+      color: white;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-radius: 9999px;
+      padding: 0.75rem 2rem;
+      margin-left: 0.75rem;
+      transition: 0.3s ease;
+    }
+    .btn-ghost:hover {
+      background: rgba(255,255,255,0.1);
+      transform: scale(1.05);
+    }
+
+    .glass-card {
+      backdrop-filter: blur(20px);
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 1.5rem;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+      color: white;
+      padding: 2rem;
+      margin: 1rem;
+    }
+
+    .title {
+      font-size: 3rem;
+      font-weight: 800;
+      background: linear-gradient(90deg, #60a5fa, #a78bfa);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    footer {
+      text-align: center;
+      padding: 2rem;
+      color: rgba(255,255,255,0.7);
+      font-size: 0.9rem;
+    }
+    footer a { color: #a5b4fc; margin: 0 0.3rem; text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+  </style>
 </head>
 <body>
   {% include 'partials/navbar.html' %}
+
   <main class="page-container">
+    <!-- HERO SECTION -->
     <section class="hero glass-card animate-fade">
       <div class="hero-content">
         <h1 class="title" data-i18n="appName">TruthLens</h1>
         <p class="subtitle" data-i18n="tagline">See the Truth Beyond the Noise.</p>
         <div class="cta">
-          <a href="/analyze" class="btn-primary btn-xl" id="verifyBtn" data-i18n="verifyNow">Verify Now</a>
+          <a href="/analyze" class="btn-primary btn-xl float" id="verifyBtn" data-i18n="verifyNow">Verify Now</a>
           <a href="#how" class="btn-ghost" data-i18n="how">How it works</a>
         </div>
         <div class="quick-features">
           <span>Text</span> · <span>Link</span> · <span>Image</span> · <span>Video</span>
         </div>
       </div>
-      <div class="hero-visual">
+      <div class="hero-visual float">
         <div class="mockup-card">
-          <img src="{{ url_for('static', filename='mockup-dashboard.png') }}" alt="dashboard mock" />
+          <img src="{{ url_for('static', filename='mockup-dashboard.png') }}" alt="dashboard mock" style="border-radius:1rem;width:100%;max-width:450px;box-shadow:0 0 20px rgba(255,255,255,0.1)" />
           <div class="fab" id="heroFab" title="Quick verify">🔎</div>
         </div>
       </div>
     </section>
 
-    <section id="how" class="glass-card animate-slide-up">
+    <!-- HOW IT WORKS -->
+    <section id="how" class="glass-card animate-fade">
       <h2>How TruthLens Works</h2>
       <ol>
         <li>Submit text, link, image, or video transcript.</li>
-        <li>Gemini analyzes content and returns credibility score, summary and sources.</li>
-        <li>Save, export, or share the report.</li>
+        <li>Gemini analyzes content and returns credibility, summary, and verified sources.</li>
+        <li>Save, export, or share your report easily.</li>
       </ol>
     </section>
 
+    <!-- FEATURE PANELS -->
     <section class="three-panel">
-      <article class="panel glass-card animate-stagger">
+      <article class="panel glass-card animate-fade">
         <h3 data-i18n="insights">Insights</h3>
         <p>Visualize credibility trends and contributor rankings.</p>
-        <a class="btn small" href="/insights">Open Insights</a>
+        <a class="btn-primary small" href="/insights">Open Insights</a>
       </article>
-      <article class="panel glass-card animate-stagger">
+      <article class="panel glass-card animate-fade">
         <h3 data-i18n="resources">Resources</h3>
-        <p>Verified fact-checking sources and media literacy kits.</p>
-        <a class="btn small" href="/resources">Open Resources</a>
+        <p>Verified fact-checking sources and media literacy guides.</p>
+        <a class="btn-primary small" href="/resources">Open Resources</a>
       </article>
-      <article class="panel glass-card animate-stagger">
+      <article class="panel glass-card animate-fade">
         <h3 data-i18n="history">History</h3>
         <p>Saved checks and exports available in your profile.</p>
-        <a class="btn small" href="/profile">Open Profile</a>
+        <a class="btn-primary small" href="/profile">Open Profile</a>
       </article>
     </section>
 
-    <footer class="footer">
+    <!-- FOOTER -->
+    <footer>
       <div>© {{ datetime.utcnow().year }} TruthLens • Built with ♡</div>
-      <div class="footer-links"><a href="/about">About</a> · <a href="/contact">Contact</a></div>
+      <div class="footer-links">
+        <a href="/privacy">Privacy</a> ·
+        <a href="/terms">Terms</a> ·
+        <a href="/faq">FAQ</a> ·
+        <a href="/feedback">Feedback</a>
+      </div>
     </footer>
   </main>
+
+  <script>
+    // Intersection Observer for animations
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        if (e.isIntersecting) e.target.classList.add('visible');
+      });
+    });
+    document.querySelectorAll('.animate-fade').forEach(el => observer.observe(el));
+  </script>
 </body>
 </html>

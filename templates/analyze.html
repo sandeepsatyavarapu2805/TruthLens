@@ -1,66 +1,80 @@
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title data-i18n="analyze">Analyze — TruthLens</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='pro-style.css') }}">
-  <script defer src="{{ url_for('static', filename='pro-script.js') }}"></script>
-</head>
-<body>
-  {% include 'partials/navbar.html' %}
-  <main class="page-container">
-    <section class="analyze-top glass-card animate-fade">
-      <h2 data-i18n="analyze">Analyze</h2>
-      <div class="analyze-grid">
-        <div class="input-col">
-          <label class="label">Text / URL</label>
-          <textarea id="inputContent" placeholder="" aria-label="input"></textarea>
-          <div class="row" style="margin-top:8px;">
-            <button id="btnAnalyzeText" class="btn-primary">Analyze Text</button>
-            <button id="btnClear" class="btn-ghost">Clear</button>
-            <button id="btnCopy" class="btn-ghost">Copy</button>
-          </div>
+{% extends "base.html" %}
+{% block content %}
 
-          <label class="label" style="margin-top:14px;">Upload Image / Video</label>
-          <input id="fileInput" type="file" accept="image/*,video/*" />
-          <div class="row" style="margin-top:8px;">
-            <button id="btnAnalyzeFile" class="btn-primary">Analyze Media</button>
-            <button id="btnResetFile" class="btn-ghost">Reset</button>
-          </div>
+<section class="min-h-screen pt-24 pb-16 px-6 bg-gradient-to-br from-[#0f172a] via-[#1e293b] to-[#0f172a] text-gray-100">
+  <div class="max-w-5xl mx-auto">
 
-          <label class="label" style="margin-top:14px;">Video Transcript</label>
-          <textarea id="transcriptInput" rows="4"></textarea>
-          <div class="row" style="margin-top:8px;">
-            <button id="btnAnalyzeTranscript" class="btn-primary">Analyze Transcript</button>
-          </div>
+    <!-- Page Header -->
+    <div class="text-center mb-10">
+      <h1 class="text-4xl font-bold mb-3 text-transparent bg-clip-text bg-gradient-to-r from-sky-400 to-indigo-400">
+        Truth Analyzer
+      </h1>
+      <p class="text-gray-400 text-lg">Verify text, images, links, or transcripts using AI-powered credibility detection.</p>
+    </div>
 
-          <div class="tips glass-card small muted" style="margin-top:14px;">
-            <strong>Tips:</strong> Add context (source, date) to improve analysis. Use the mic to dictate text.
-          </div>
-        </div>
+    <!-- Analyze Inputs -->
+    <div class="glass-card p-6 rounded-2xl animate-fade-up space-y-6">
 
-        <div class="results-col">
-          <div class="results-header">
-            <h3>Latest Result</h3>
-            <div class="actions">
-              <button id="btnExportPDF" class="btn-ghost">Export PDF</button>
-              <button id="btnShare" class="btn-ghost">Share</button>
-            </div>
-          </div>
-          <div id="resultsArea" class="results-area animate-stagger">
-            <div class="placeholder muted">No results yet — run an analysis.</div>
-          </div>
-
-          <div class="history-card glass-card">
-            <h4>Your Recent Checks</h4>
-            <div id="historyList" class="history-list">
-              <div class="muted">Loading recent checks…</div>
-            </div>
-          </div>
-        </div>
+      <!-- Text / Link Input -->
+      <div>
+        <label for="inputContent" class="block mb-2 text-gray-300 font-medium">📝 Text or Link</label>
+        <textarea id="inputContent" rows="4" class="w-full p-3 bg-black/40 border border-white/10 rounded-lg focus:ring-2 focus:ring-sky-500 focus:outline-none resize-none" placeholder="Paste text, caption, or a URL..."></textarea>
       </div>
-    </section>
-  </main>
-</body>
-</html>
+
+      <!-- File Upload -->
+      <div class="flex flex-wrap items-center gap-4">
+        <label for="fileInput" class="block text-gray-300 font-medium">🖼️ Upload Image / Screenshot</label>
+        <input type="file" id="fileInput" accept="image/*" class="text-gray-200"/>
+      </div>
+
+      <!-- Transcript Input -->
+      <div>
+        <label for="transcriptInput" class="block mb-2 text-gray-300 font-medium">🎬 Video Transcript (optional)</label>
+        <textarea id="transcriptInput" rows="3" class="w-full p-3 bg-black/40 border border-white/10 rounded-lg focus:ring-2 focus:ring-sky-500 focus:outline-none resize-none" placeholder="Paste YouTube transcript or captions..."></textarea>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="flex flex-wrap gap-4 justify-center mt-4">
+        <button id="btnAnalyzeText" class="btn-primary px-6 py-2 rounded-lg bg-sky-600 hover:bg-sky-700 transition flex items-center gap-2">
+          🔍 Analyze Text / Link
+        </button>
+        <button id="btnAnalyzeFile" class="btn-secondary px-6 py-2 rounded-lg hover:bg-white/10 transition flex items-center gap-2">
+          🖼️ Analyze Image
+        </button>
+        <button id="btnAnalyzeTranscript" class="btn-secondary px-6 py-2 rounded-lg hover:bg-white/10 transition flex items-center gap-2">
+          🎬 Analyze Transcript
+        </button>
+        <button id="btnClear" class="btn-secondary px-6 py-2 rounded-lg hover:bg-white/10 transition">
+          🧹 Clear
+        </button>
+        <button id="btnCopy" class="btn-secondary px-6 py-2 rounded-lg hover:bg-white/10 transition">
+          📋 Copy
+        </button>
+      </div>
+    </div>
+
+    <!-- Loading Spinner -->
+    <div id="loadingSpinner" class="flex justify-center mt-10 hidden">
+      <div class="loader border-t-4 border-sky-500 rounded-full w-12 h-12 animate-spin"></div>
+    </div>
+
+    <!-- Results Area -->
+    <div id="resultsArea" class="mt-10 glass-card p-6 rounded-2xl animate-fade hidden">
+      <h2 class="text-2xl font-semibold mb-4 text-sky-400">Results</h2>
+
+      <!-- Dynamic AI Output Here -->
+      <div id="aiResultsContent" class="text-gray-300 space-y-4">
+        <!-- JS injects credibility score, summary, and sources here -->
+      </div>
+    </div>
+
+    <!-- History -->
+    <div class="glass-card p-6 rounded-2xl mt-10 animate-fade-up">
+      <h2 class="text-xl font-semibold mb-3">🕓 Recent Analyses</h2>
+      <div id="historyList" class="space-y-3 text-gray-400 text-sm"></div>
+    </div>
+
+  </div>
+</section>
+
+{% endblock %}
